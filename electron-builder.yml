@@ -29,9 +29,10 @@ nsis:
   installerLanguages:
     - de_DE
 
-# Updates are published as GitHub Releases of this repository.
+# Updates are published as GitHub Releases of this repository. The installer is
+# uploaded to a draft first; the release workflow publishes it once all files are there.
 publish:
   provider: github
   owner: haqpy1337
   repo: Finanztracker
-  releaseType: release
+  releaseType: draft

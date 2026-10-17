@@ -42,10 +42,16 @@ jobs:
             version="$(node -p "require('./package.json').version")"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if gh release view "v$version" >/dev/null 2>&1; then
+          # A release counts as done only once latest.yml (read by the updater) is attached.
+          assets="$(gh release view "v$version" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+          if grep -qx "latest.yml" <<< "$assets"; then
             echo "Release v$version already exists, nothing to publish."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
+            if gh release view "v$version" >/dev/null 2>&1; then
+              echo "Removing incomplete release v$version."
+              gh release delete "v$version" --cleanup-tag --yes
+            fi
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -57,6 +63,22 @@ jobs:
         if: steps.version.outputs.publish == 'true'
         run: npm test
 
-      - name: Build and publish installer
+      - name: Build installer and upload to draft release
         if: steps.version.outputs.publish == 'true'
-        run: npm run release
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run release 2>&1 | tee build.log
+
+      - name: Publish release
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: gh release edit "v${{ steps.version.outputs.version }}" --draft=false --latest
+
+      - name: Report build output
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f build.log ]; then
+            echo "::error title=Build log (last lines)::$(tail -n 60 build.log | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+          fi
