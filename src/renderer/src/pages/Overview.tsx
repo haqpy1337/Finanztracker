@@ -20,6 +20,7 @@ import { date, dayAndWeekday, money, MONTHS, MONTHS_SHORT, percent } from '@/lib
 import { seriesColor } from '@/lib/palette'
 import { upcomingContractEnds } from '@/lib/derive'
 import { categorySlices, DonutChart, GroupedBarChart, Legend } from '@/components/charts'
+import { AnimatedMoney } from '@/components/AnimatedNumber'
 import { Card, CategoryLabel, EmptyState, Kpi, PageHeader } from '@/components/ui'
 import { useEntryEditor } from '@/components/EntryEditor'
 
@@ -38,6 +39,7 @@ export function Overview() {
     const estimated = sum(activeRecurring.filter((e) => e.estimated).map(monthlyEquivalent))
     const subscriptions = activeRecurring.filter((e) => e.categoryId === 'cat-abos')
     const free = incomeMonthly - expenseMonthly
+    const incomeHasExtras = entries.some((e) => e.kind === 'income' && e.extraPayments.length > 0 && isActiveOn(e, today))
 
     const perCategory = new Map<string, number>()
     for (const e of activeRecurring) perCategory.set(e.categoryId, sum([perCategory.get(e.categoryId) ?? 0, monthlyEquivalent(e)]))
@@ -59,6 +61,7 @@ export function Overview() {
     return {
       expenseMonthly,
       incomeMonthly,
+      incomeHasExtras,
       estimated,
       free,
       savingsRate: incomeMonthly > 0 ? (free / incomeMonthly) * 100 : null,
@@ -131,7 +134,7 @@ export function Overview() {
         <Kpi
           label="Fixkosten pro Monat"
           icon={<TrendingDown size={15} />}
-          value={money(stats.expenseMonthly)}
+          value={<AnimatedMoney value={stats.expenseMonthly} />}
           foot={
             <>
               {stats.estimated > 0 ? <span>davon geschätzt {money(stats.estimated)}</span> : <span>{stats.activeCount} laufende Posten</span>}
@@ -148,17 +151,23 @@ export function Overview() {
             </>
           }
         />
-        <Kpi label="Einnahmen pro Monat" icon={<TrendingUp size={15} />} value={money(stats.incomeMonthly)} foot={stats.incomeMonthly === 0 ? 'Noch keine Einnahmen erfasst' : 'regelmäßige Einnahmen'} />
+        <Kpi label="Einnahmen pro Monat" icon={<TrendingUp size={15} />} value={<AnimatedMoney value={stats.incomeMonthly} />} foot={
+            stats.incomeMonthly === 0
+              ? 'Noch keine Einnahmen erfasst'
+              : stats.incomeHasExtras
+                ? 'Durchschnitt inkl. Sonderzahlungen'
+                : 'regelmäßige Einnahmen'
+          } />
         <Kpi
           label="Frei verfügbar pro Monat"
           icon={<PiggyBank size={15} />}
-          value={<span className={stats.free < 0 ? 'text-bad' : ''}>{money(stats.free)}</span>}
+          value={<span className={stats.free < 0 ? 'text-bad' : ''}><AnimatedMoney value={stats.free} /></span>}
           foot={stats.savingsRate !== null ? `${percent(stats.savingsRate)} der Einnahmen bleiben übrig` : 'Einnahmen erfassen für diese Auswertung'}
         />
         <Kpi
           label="Fixkosten pro Jahr"
           icon={<Repeat size={15} />}
-          value={money(stats.expenseMonthly * 12)}
+          value={<AnimatedMoney value={stats.expenseMonthly * 12} />}
           foot={
             stats.subscriptionsCount > 0
               ? `${stats.subscriptionsCount} Abos für ${money(stats.subscriptionsMonthly)} im Monat`
@@ -199,13 +208,16 @@ export function Overview() {
               {stats.upcoming.slice(0, 40).map((o) => {
                 const p = parseIso(o.date)
                 return (
-                  <div className="list-row" key={`${o.entry.id}-${o.date}`} onDoubleClick={() => editor.edit(o.entry)}>
+                  <div className="list-row" key={`${o.entry.id}-${o.date}-${o.extraLabel ?? ''}`} onDoubleClick={() => editor.edit(o.entry)}>
                     <div className="date-chip">
                       <div className="d">{p.d}</div>
                       <div className="m">{MONTHS_SHORT[p.m - 1]}</div>
                     </div>
                     <div className="grow">
-                      <div className="title">{o.entry.name}</div>
+                      <div className="title">
+                        {o.entry.name}
+                        {o.extraLabel && <span className="text-2"> · {o.extraLabel}</span>}
+                      </div>
                       <div className="entry-meta">
                         {dayAndWeekday(o.date)} · {categoryById(o.entry.categoryId)?.name ?? 'Ohne Kategorie'}
                       </div>

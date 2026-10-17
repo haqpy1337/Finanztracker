@@ -23,6 +23,12 @@ interface Store {
 
 const StoreContext = createContext<Store | null>(null)
 
+/** Error text without the technical prefix Electron adds to errors from the main process. */
+function errorText(err: unknown): string {
+  const text = err instanceof Error ? err.message : String(err)
+  return text.replace(/^Error invoking remote method '[^']+': (\w*Error: )?/, '')
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(emptyData)
   const [loaded, setLoaded] = useState(false)
@@ -39,25 +45,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setLoaded(true)
       })
       .catch((err: unknown) => {
-        setLoadError(err instanceof Error ? err.message : String(err))
+        setLoadError(errorText(err))
       })
   }, [])
 
-  const flush = useCallback(() => {
+  const lastSave = useRef<Promise<void>>(Promise.resolve())
+
+  /** Saves pending changes now; resolves once they are written. */
+  const flush = useCallback((): Promise<void> => {
     window.clearTimeout(timer.current)
     const next = pending.current
-    if (!next) return
-    pending.current = null
-    api
-      .saveData(next)
-      .then(() => setSaveError(null))
-      .catch((err: unknown) => setSaveError(err instanceof Error ? err.message : String(err)))
+    if (next) {
+      pending.current = null
+      lastSave.current = api
+        .saveData(next)
+        .then(() => setSaveError(null))
+        .catch((err: unknown) => {
+          // Keep the unsaved state so the next change or close retries it.
+          pending.current = pending.current ?? next
+          setSaveError(errorText(err))
+        })
+    }
+    return lastSave.current
   }, [])
 
-  useEffect(() => {
-    window.addEventListener('beforeunload', flush)
-    return () => window.removeEventListener('beforeunload', flush)
-  }, [flush])
+  useEffect(() => api.onFlushRequest(flush), [flush])
 
   const commit = useCallback(
     (update: (prev: AppData) => AppData) => {

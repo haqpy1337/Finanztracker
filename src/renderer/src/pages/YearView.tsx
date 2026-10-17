@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store'
 import { useDark } from '@/lib/theme'
 import { money, moneyShort, MONTHS, MONTHS_SHORT, percent } from '@/lib/format'
 import { categorySlices, Legend, OTHER_KEY, StackedMonthChart } from '@/components/charts'
+import { AnimatedMoney } from '@/components/AnimatedNumber'
 import { Card, CategoryLabel, Delta, Kpi, PageHeader, PeriodNav } from '@/components/ui'
 
 function ShareList({ items, total }: { items: Array<{ label: string; value: number }>; total: number }) {
@@ -92,7 +93,7 @@ export function YearView() {
         <Kpi
           label={`Ausgaben ${year}`}
           icon={<TrendingDown size={15} />}
-          value={money(s.expenseTotal)}
+          value={<AnimatedMoney value={s.expenseTotal} />}
           foot={
             <>
               {s.prevExpense > 0 ? (
@@ -109,7 +110,7 @@ export function YearView() {
         <Kpi
           label={`Einnahmen ${year}`}
           icon={<TrendingUp size={15} />}
-          value={money(s.incomeTotal)}
+          value={<AnimatedMoney value={s.incomeTotal} />}
           foot={
             <>
               {s.prevIncome > 0 ? (
@@ -126,13 +127,13 @@ export function YearView() {
         <Kpi
           label="Überschuss"
           icon={<PiggyBank size={15} />}
-          value={<span className={balance < 0 ? 'text-bad' : balance > 0 ? 'text-good' : ''}>{money(balance)}</span>}
+          value={<span className={balance < 0 ? 'text-bad' : balance > 0 ? 'text-good' : ''}><AnimatedMoney value={balance} /></span>}
           foot={s.incomeTotal > 0 ? `Sparquote ${percent((balance / s.incomeTotal) * 100)}` : 'ohne erfasste Einnahmen'}
         />
         <Kpi
           label="Durchschnitt pro Monat"
           icon={<CalendarRange size={15} />}
-          value={money(s.expenseTotal / monthsWithData)}
+          value={<AnimatedMoney value={s.expenseTotal / monthsWithData} />}
           foot={s.expenseTotal > 0 ? `teuerster Monat: ${MONTHS[s.highest]} (${money(s.expenseMonths[s.highest])})` : 'keine Ausgaben'}
         />
       </div>

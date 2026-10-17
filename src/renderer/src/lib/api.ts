@@ -37,6 +37,9 @@ const browserApi: FinanceApi = {
   async importJson() {
     return null
   },
+  async backupNow() {
+    return null
+  },
   async openDataFolder() {},
   async setTheme() {},
   async getVersion() {
@@ -46,6 +49,9 @@ const browserApi: FinanceApi = {
   async installUpdate() {},
   onUpdateStatus(listener: (status: UpdateStatus) => void) {
     listener({ state: 'disabled', reason: 'Updates sind nur in der installierten Version aktiv.' })
+    return () => undefined
+  },
+  onFlushRequest() {
     return () => undefined
   }
 }

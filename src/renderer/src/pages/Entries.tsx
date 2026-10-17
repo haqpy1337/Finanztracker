@@ -6,7 +6,7 @@ import { INTERVAL_LABELS } from '@shared/defaults'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/lib/toast'
 import { api } from '@/lib/api'
-import { date, money } from '@/lib/format'
+import { date, money, MONTHS } from '@/lib/format'
 import { entriesToCsv, entryStatus, STATUS_LABELS, type EntryStatus } from '@/lib/derive'
 import { Card, CategoryLabel, EmptyState, PageHeader, Segmented } from '@/components/ui'
 import { useEntryEditor } from '@/components/EntryEditor'
@@ -181,7 +181,7 @@ export function Entries() {
                   {header('category', 'Kategorie')}
                   {header('interval', 'Intervall')}
                   {header('amount', 'Betrag', true)}
-                  {header('monthly', 'Pro Monat', true)}
+                  {header('monthly', 'Ø pro Monat', true)}
                   {header('next', 'Nächste Fälligkeit')}
                   <th>Status</th>
                   <th />
@@ -209,6 +209,11 @@ export function Entries() {
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <span className={`badge ${STATUS_BADGE[st]}`}>{STATUS_LABELS[st]}</span>
                         {e.estimated && <span className="badge warn">geschätzt</span>}
+                        {e.interval !== 'once' && e.extraPayments.length > 0 && (
+                          <span className="badge accent" title={e.extraPayments.map((x) => `${x.label || 'Sonderzahlung'}: ${money(x.amount)} im ${MONTHS[x.month - 1]}`).join('\n')}>
+                            {e.extraPayments.length === 1 ? '+1 Sonderzahlung' : `+${e.extraPayments.length} Sonderzahlungen`}
+                          </span>
+                        )}
                         {e.contractEnd && e.contractEnd >= today && <span className="badge">kündbar bis {date(e.contractEnd)}</span>}
                       </div>
                     </td>

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import log from 'electron-log/main'
 import { normalizeData } from '@shared/defaults'
 import type { AppData, ThemePreference } from '@shared/types'
-import { backupOnStart, dataDir, loadData, saveData } from './storage'
+import { backupOnStart, createBackup, dataDir, loadData, saveData, waitForWrites } from './storage'
 import { checkForUpdates, initUpdater, installUpdate, lastUpdateStatus } from './updater'
 
 log.initialize()
@@ -13,6 +13,23 @@ app.setAppUserModelId('com.haqpy1337.finanztracker')
 app.commandLine.appendSwitch('lang', 'de-DE')
 
 let mainWindow: BrowserWindow | null = null
+let closing = false
+
+/** Asks the window to save pending changes and waits until they are on disk. */
+async function flushPendingChanges(timeoutMs = 4000): Promise<void> {
+  const win = mainWindow
+  if (win && !win.isDestroyed()) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs)
+      ipcMain.once('app:flushed', () => {
+        clearTimeout(timer)
+        resolve()
+      })
+      win.webContents.send('app:flush')
+    })
+  }
+  await waitForWrites()
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -30,6 +47,17 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: true
     }
+  })
+
+  // Never close before the last changes are saved.
+  mainWindow.on('close', (event) => {
+    if (closing) return
+    event.preventDefault()
+    closing = true
+    void flushPendingChanges().finally(() => {
+      mainWindow?.destroy()
+      app.quit()
+    })
   })
 
   mainWindow.once('ready-to-show', () => {
@@ -90,8 +118,12 @@ function registerIpc(): void {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     const raw = await fs.readFile(result.filePaths[0], 'utf8')
-    return normalizeData(JSON.parse(raw))
+    const imported = normalizeData(JSON.parse(raw))
+    await createBackup('import')
+    return imported
   })
+
+  ipcMain.handle('data:backup', (_e, reason: string) => createBackup(reason))
 
   ipcMain.handle('app:open-data-folder', async () => {
     await fs.mkdir(dataDir(), { recursive: true })
@@ -102,7 +134,11 @@ function registerIpc(): void {
   })
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('update:check', () => checkForUpdates())
-  ipcMain.handle('update:install', () => installUpdate())
+  ipcMain.handle('update:install', async () => {
+    await flushPendingChanges()
+    closing = true
+    installUpdate()
+  })
   ipcMain.handle('update:last', () => lastUpdateStatus())
 }
 

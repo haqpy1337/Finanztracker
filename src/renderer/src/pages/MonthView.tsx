@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store'
 import { useDark } from '@/lib/theme'
 import { dayAndWeekday, money, monthLabel, MONTHS, percent } from '@/lib/format'
 import { categorySlices, DonutChart } from '@/components/charts'
+import { AnimatedMoney } from '@/components/AnimatedNumber'
 import { Card, CategoryLabel, Delta, Kpi, PageHeader, PeriodNav, Segmented } from '@/components/ui'
 import { useEntryEditor } from '@/components/EntryEditor'
 
@@ -69,7 +70,7 @@ export function MonthView() {
         <Kpi
           label="Ausgaben im Monat"
           icon={<TrendingDown size={15} />}
-          value={money(s.expenseTotal)}
+          value={<AnimatedMoney value={s.expenseTotal} />}
           foot={
             <>
               {s.prevExpense > 0 ? (
@@ -86,7 +87,7 @@ export function MonthView() {
         <Kpi
           label="Einnahmen im Monat"
           icon={<TrendingUp size={15} />}
-          value={money(s.incomeTotal)}
+          value={<AnimatedMoney value={s.incomeTotal} />}
           foot={
             <>
               {s.prevIncome > 0 ? (
@@ -103,13 +104,13 @@ export function MonthView() {
         <Kpi
           label="Saldo"
           icon={<Scale size={15} />}
-          value={<span className={balance < 0 ? 'text-bad' : balance > 0 ? 'text-good' : ''}>{money(balance)}</span>}
+          value={<span className={balance < 0 ? 'text-bad' : balance > 0 ? 'text-good' : ''}><AnimatedMoney value={balance} /></span>}
           foot={s.incomeTotal > 0 ? `${percent((balance / s.incomeTotal) * 100)} der Einnahmen` : 'ohne erfasste Einnahmen'}
         />
         <Kpi
           label={budget > 0 ? 'Budget' : 'Durchschnitt pro Monat'}
           icon={<Wallet size={15} />}
-          value={budget > 0 ? money(budget - s.expenseTotal) : money(s.average)}
+          value={<AnimatedMoney value={budget > 0 ? budget - s.expenseTotal : s.average} />}
           foot={
             budget > 0 ? (
               <span className={s.expenseTotal > budget ? 'text-bad' : ''}>
@@ -186,13 +187,18 @@ export function MonthView() {
                 </thead>
                 <tbody>
                   {rows.map((o) => (
-                    <tr key={`${o.entry.id}-${o.date}`} onDoubleClick={() => editor.edit(o.entry)} style={{ cursor: 'default' }}>
+                    <tr key={`${o.entry.id}-${o.date}-${o.extraLabel ?? ''}`} onDoubleClick={() => editor.edit(o.entry)} style={{ cursor: 'default' }}>
                       <td className="num text-2" style={{ whiteSpace: 'nowrap' }}>
                         {dayAndWeekday(o.date)}
                       </td>
                       <td>
                         <div className="entry-name">
                           {o.entry.name}
+                          {o.extraLabel && (
+                            <span className="badge accent" style={{ marginLeft: 8 }}>
+                              {o.extraLabel}
+                            </span>
+                          )}
                           {o.entry.estimated && (
                             <span className="badge warn" style={{ marginLeft: 8 }}>
                               geschätzt

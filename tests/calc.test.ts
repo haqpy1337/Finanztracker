@@ -4,6 +4,7 @@ import {
   monthTotals,
   monthlyEquivalent,
   nextOccurrence,
+  occurrencesInMonth,
   occurrencesBetween,
   recurringMonthlyTotal,
   sum
@@ -102,5 +103,39 @@ describe('normalizeData', () => {
 
   it('rejects files that are not tracker data', () => {
     expect(() => normalizeData({ foo: 1 })).toThrow()
+  })
+})
+
+describe('extra payments (13th/14th salary)', () => {
+  const salary = entry({
+    kind: 'income',
+    categoryId: 'cat-gehalt',
+    amount: 3000,
+    startDate: '2026-01-28',
+    extraPayments: [
+      { id: 'a', month: 5, amount: 3000, label: '13. Gehalt' },
+      { id: 'b', month: 11, amount: 3000, label: '14. Gehalt' }
+    ]
+  })
+
+  it('adds the extra payment in its month', () => {
+    const may = occurrencesInMonth([salary], 2026, 5)
+    expect(may.map((o) => [o.date, o.amount, o.extraLabel])).toEqual([
+      ['2026-05-28', 3000, undefined],
+      ['2026-05-28', 3000, '13. Gehalt']
+    ])
+    expect(occurrencesInMonth([salary], 2026, 6)).toHaveLength(1)
+  })
+
+  it('counts 14 salaries per year', () => {
+    expect(sum(monthTotals([salary], 2026, 'income'))).toBe(42000)
+    expect(monthlyEquivalent(salary)).toBe(3500)
+  })
+
+  it('respects start and end date', () => {
+    const late = { ...salary, startDate: '2026-06-28', endDate: '2027-05-01' }
+    expect(occurrencesInMonth([late], 2026, 5)).toHaveLength(0)
+    expect(occurrencesInMonth([late], 2026, 11)).toHaveLength(2)
+    expect(occurrencesInMonth([late], 2027, 5)).toHaveLength(0)
   })
 })

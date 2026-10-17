@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { DarkContext, useAppliedTheme } from '@/lib/theme'
 import { Sidebar, type PageId } from '@/components/Sidebar'
 import { useEntryEditor } from '@/components/EntryEditor'
+import { Splash } from '@/components/Splash'
+import { useAppVersion } from '@/lib/updates'
 import { Overview } from '@/pages/Overview'
 import { MonthView } from '@/pages/MonthView'
 import { YearView } from '@/pages/YearView'
@@ -26,7 +28,7 @@ function initialPage(): PageId {
 export function App() {
   const { data, loaded, loadError, saveError } = useStore()
   const editor = useEntryEditor()
-  const dark = useAppliedTheme(data.settings.theme)
+  const dark = useAppliedTheme(data.settings.theme, loaded)
   const [page, setPage] = useState<PageId>(initialPage)
   const mainRef = useRef<HTMLElement>(null)
 
@@ -51,23 +53,27 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [editor])
 
+  const version = useAppVersion()
+  // The first page animates in only once the start-up screen fades out.
+  const [booted, setBooted] = useState(false)
+  const onSplashExit = useCallback(() => setBooted(true), [])
+
+  let content: ReactNode = null
   if (loadError) {
-    return (
+    content = (
       <div className="loading">
-        <div className="alert bad" style={{ maxWidth: 520 }}>
+        <div className="alert bad" style={{ maxWidth: 560 }}>
           <AlertTriangle size={18} style={{ flex: 'none' }} />
           <div>
             <strong>Die Daten konnten nicht geladen werden.</strong>
             <div>{loadError}</div>
+            <div style={{ marginTop: 6 }}>Es wurde nichts verändert oder überschrieben.</div>
           </div>
         </div>
       </div>
     )
-  }
-  if (!loaded) return <div className="loading">Daten werden geladen …</div>
-
-  return (
-    <DarkContext.Provider value={dark}>
+  } else if (loaded) {
+    content = (
       <div className="app">
         <Sidebar page={page} onNavigate={navigate} />
         <main className="main" ref={mainRef}>
@@ -79,14 +85,23 @@ export function App() {
               </div>
             </div>
           )}
-          {page === 'overview' && <Overview />}
-          {page === 'month' && <MonthView />}
-          {page === 'year' && <YearView />}
-          {page === 'entries' && <Entries />}
-          {page === 'categories' && <Categories />}
-          {page === 'settings' && <Settings />}
+          <div key={`${page}-${booted}`} className="page-enter">
+            {page === 'overview' && <Overview />}
+            {page === 'month' && <MonthView />}
+            {page === 'year' && <YearView />}
+            {page === 'entries' && <Entries />}
+            {page === 'categories' && <Categories />}
+            {page === 'settings' && <Settings />}
+          </div>
         </main>
       </div>
+    )
+  }
+
+  return (
+    <DarkContext.Provider value={dark}>
+      {content}
+      <Splash ready={loaded || Boolean(loadError)} version={version} onExit={onSplashExit} />
     </DarkContext.Provider>
   )
 }

@@ -83,7 +83,7 @@ export function Settings() {
           </div>
         </Card>
 
-        <Card title="Daten" hint="Alles wird nur lokal auf diesem PC gespeichert. Beim Start legt die App täglich eine Sicherung an (30 Tage)." flush>
+        <Card title="Daten" hint="Alles wird nur lokal auf diesem PC gespeichert. Die App sichert die Daten automatisch: täglich, vor jedem Update und vor Import oder Zurücksetzen." flush>
           <div className="settings-row">
             <div>
               <div>Sicherung exportieren</div>
@@ -199,10 +199,11 @@ export function Settings() {
       {confirm === 'reset' && (
         <ConfirmDialog
           title="Alle Daten löschen?"
-          text="Alle Posten und eigenen Kategorien werden entfernt. Die automatischen Sicherungen im Datenordner bleiben erhalten."
+          text="Alle Posten und eigenen Kategorien werden entfernt. Vorher wird eine Sicherung im Datenordner angelegt."
           confirmLabel="Alles löschen"
           onClose={() => setConfirm(null)}
-          onConfirm={() => {
+          onConfirm={async () => {
+            await api.backupNow('zuruecksetzen')
             replaceData({ ...emptyData(), settings: data.settings })
             toast({ message: 'Alle Daten wurden gelöscht' })
           }}
@@ -211,10 +212,13 @@ export function Settings() {
       {confirm === 'sample' && (
         <ConfirmDialog
           title="Beispieldaten laden?"
-          text="Deine aktuellen Posten werden durch Beispieldaten ersetzt. Exportiere vorher eine Sicherung, wenn du sie behalten möchtest."
+          text="Deine aktuellen Posten werden durch Beispieldaten ersetzt. Vorher wird eine Sicherung im Datenordner angelegt."
           confirmLabel="Beispieldaten laden"
           onClose={() => setConfirm(null)}
-          onConfirm={() => replaceData({ ...sampleData({ y, m }), settings: data.settings })}
+          onConfirm={async () => {
+            await api.backupNow('beispieldaten')
+            replaceData({ ...sampleData({ y, m }), settings: data.settings })
+          }}
         />
       )}
     </div>

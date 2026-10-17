@@ -12,6 +12,15 @@ export interface Category {
   color: number
 }
 
+/** An additional payment in a fixed calendar month, e.g. a 13th salary in November. */
+export interface ExtraPayment {
+  id: string
+  /** Calendar month 1-12. */
+  month: number
+  amount: number
+  label: string
+}
+
 export interface Entry {
   id: string
   kind: EntryKind
@@ -34,6 +43,8 @@ export interface Entry {
   /** Minimum term / next possible cancellation date (YYYY-MM-DD). */
   contractEnd: string | null
   notes: string
+  /** Paid once a year in the given months on top of the regular amount. */
+  extraPayments: ExtraPayment[]
   createdAt: string
   updatedAt: string
 }
@@ -45,7 +56,7 @@ export interface Settings {
 }
 
 export interface AppData {
-  schemaVersion: 1
+  schemaVersion: 2
   categories: Category[]
   entries: Entry[]
   settings: Settings
@@ -67,10 +78,14 @@ export interface FinanceApi {
   exportJson(data: AppData): Promise<string | null>
   exportCsv(csv: string): Promise<string | null>
   importJson(): Promise<AppData | null>
+  /** Stores a permanent copy of the current data, e.g. before replacing it. */
+  backupNow(reason: string): Promise<string | null>
   openDataFolder(): Promise<void>
   setTheme(theme: ThemePreference): Promise<void>
   getVersion(): Promise<string>
   checkForUpdates(): Promise<void>
   installUpdate(): Promise<void>
   onUpdateStatus(listener: (status: UpdateStatus) => void): () => void
+  /** Registers the function that saves pending changes before the app closes. */
+  onFlushRequest(flush: () => Promise<void>): () => void
 }

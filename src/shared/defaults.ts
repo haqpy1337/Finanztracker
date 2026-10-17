@@ -1,4 +1,5 @@
-import type { AppData, Category, Entry, EntryKind, Interval, Settings } from './types'
+import type { AppData, Category, Entry, EntryKind, ExtraPayment, Interval, Settings } from './types'
+import { CURRENT_SCHEMA, migrate } from './schema'
 import { addMonths, isValidIso, toIso } from './calc'
 
 export const INTERVAL_LABELS: Record<Interval, string> = {
@@ -39,7 +40,7 @@ export function defaultCategories(): Category[] {
 }
 
 export function emptyData(): AppData {
-  return { schemaVersion: 1, categories: defaultCategories(), entries: [], settings: { ...DEFAULT_SETTINGS } }
+  return { schemaVersion: CURRENT_SCHEMA, categories: defaultCategories(), entries: [], settings: { ...DEFAULT_SETTINGS } }
 }
 
 export function newId(prefix = 'e'): string {
@@ -65,6 +66,7 @@ export function blankEntry(kind: EntryKind, categoryId: string, startDate: strin
     noticePeriod: '',
     contractEnd: null,
     notes: '',
+    extraPayments: [],
     createdAt: now,
     updatedAt: now
   }
@@ -90,7 +92,14 @@ export function sampleData(today: { y: number; m: number }): AppData {
     ...extra
   })
   data.entries = [
-    make('Gehalt', 'cat-gehalt', 3150, 'monthly', day(28), { paymentMethod: 'Überweisung', provider: 'Arbeitgeber' }),
+    make('Gehalt', 'cat-gehalt', 3150, 'monthly', day(28), {
+      paymentMethod: 'Überweisung',
+      provider: 'Arbeitgeber',
+      extraPayments: [
+        { id: newId('x'), month: 5, amount: 3150, label: '13. Gehalt' },
+        { id: newId('x'), month: 11, amount: 3150, label: '14. Gehalt' }
+      ]
+    }),
     make('Kaltmiete', 'cat-wohnen', 850, 'monthly', day(1), { paymentMethod: 'Dauerauftrag', provider: 'Hausverwaltung' }),
     make('Nebenkosten-Vorauszahlung', 'cat-wohnen', 180, 'monthly', day(1), { paymentMethod: 'Dauerauftrag' }),
     make('Strom', 'cat-wohnen', 72, 'monthly', day(15), { provider: 'Stadtwerke', noticePeriod: '4 Wochen' }),
@@ -115,6 +124,41 @@ export function sampleData(today: { y: number; m: number }): AppData {
   return data
 }
 
+const ENTRY_FIELDS = new Set([
+  'id',
+  'kind',
+  'name',
+  'categoryId',
+  'amount',
+  'interval',
+  'startDate',
+  'endDate',
+  'estimated',
+  'paused',
+  'provider',
+  'paymentMethod',
+  'noticePeriod',
+  'contractEnd',
+  'notes',
+  'extraPayments',
+  'createdAt',
+  'updatedAt'
+])
+
+function normalizeExtras(value: unknown): ExtraPayment[] {
+  if (!Array.isArray(value)) return []
+  const out: ExtraPayment[] = []
+  for (const x of value) {
+    if (!x || typeof x !== 'object') continue
+    const r = x as Record<string, unknown>
+    const month = typeof r.month === 'number' ? Math.floor(r.month) : NaN
+    const amount = typeof r.amount === 'number' && Number.isFinite(r.amount) ? Math.round(Math.abs(r.amount) * 100) / 100 : 0
+    if (!(month >= 1 && month <= 12) || amount <= 0) continue
+    out.push({ id: str(r.id) || newId('x'), month, amount, label: str(r.label) })
+  }
+  return out.sort((a, b) => a.month - b.month)
+}
+
 function str(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback
 }
@@ -126,9 +170,9 @@ const INTERVALS = new Set<Interval>(['weekly', 'monthly', 'quarterly', 'halfyear
  * repaired instead of rejecting the whole file, so a single bad entry never
  * makes the rest of the data unreachable.
  */
-export function normalizeData(raw: unknown): AppData {
-  if (!raw || typeof raw !== 'object') throw new Error('Die Datei enthält keine gültigen Finanztracker-Daten.')
-  const obj = raw as Record<string, unknown>
+export function normalizeData(input: unknown): AppData {
+  if (!input || typeof input !== 'object') throw new Error('Die Datei enthält keine gültigen Finanztracker-Daten.')
+  const obj = migrate(input).data as Record<string, unknown>
   if (!Array.isArray(obj.entries) || !Array.isArray(obj.categories)) {
     throw new Error('Die Datei enthält keine gültigen Finanztracker-Daten.')
   }
@@ -165,7 +209,10 @@ export function normalizeData(raw: unknown): AppData {
     const startDate = isValidIso(str(r.startDate)) ? str(r.startDate) : toIso(new Date().getFullYear(), 1, 1)
     const amount = typeof r.amount === 'number' && Number.isFinite(r.amount) ? Math.abs(r.amount) : 0
     const now = new Date().toISOString()
+    // Fields this version does not know are kept as they are.
+    const unknownFields = Object.fromEntries(Object.entries(r).filter(([k]) => !ENTRY_FIELDS.has(k)))
     entries.push({
+      ...unknownFields,
       id: str(r.id) || newId(),
       kind,
       name: str(r.name, 'Ohne Namen') || 'Ohne Namen',
@@ -181,6 +228,7 @@ export function normalizeData(raw: unknown): AppData {
       noticePeriod: str(r.noticePeriod),
       contractEnd: isValidIso(str(r.contractEnd)) ? str(r.contractEnd) : null,
       notes: str(r.notes),
+      extraPayments: normalizeExtras(r.extraPayments),
       createdAt: str(r.createdAt, now) || now,
       updatedAt: str(r.updatedAt, now) || now
     })
@@ -192,5 +240,5 @@ export function normalizeData(raw: unknown): AppData {
     monthlyBudget: typeof s.monthlyBudget === 'number' && s.monthlyBudget > 0 ? s.monthlyBudget : 0
   }
 
-  return { schemaVersion: 1, categories, entries, settings }
+  return { schemaVersion: CURRENT_SCHEMA, categories, entries, settings }
 }

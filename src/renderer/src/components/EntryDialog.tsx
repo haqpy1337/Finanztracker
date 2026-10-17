@@ -1,11 +1,23 @@
 import { useMemo, useState } from 'react'
-import { Trash2 } from 'lucide-react'
-import type { Entry, EntryKind, Interval } from '@shared/types'
+import { Plus, Trash2, X } from 'lucide-react'
+import type { Entry, EntryKind, ExtraPayment, Interval } from '@shared/types'
 import { isValidIso, monthlyEquivalent, nextOccurrence, todayIso, yearlyEquivalent } from '@shared/calc'
-import { INTERVAL_LABELS, INTERVAL_ORDER, PAYMENT_METHODS } from '@shared/defaults'
+import { INTERVAL_LABELS, INTERVAL_ORDER, newId, PAYMENT_METHODS } from '@shared/defaults'
 import { useStore } from '@/lib/store'
-import { amountInput, date, money, parseAmount } from '@/lib/format'
+import { amountInput, date, money, MONTHS, parseAmount } from '@/lib/format'
 import { Dialog, Segmented } from './ui'
+
+interface ExtraDraft {
+  id: string
+  month: number
+  label: string
+  amountText: string
+}
+
+function startLabel(income: boolean, recurring: boolean): string {
+  if (income) return recurring ? 'Erster Zahlungseingang' : 'Datum des Zahlungseingangs'
+  return recurring ? 'Erste Fälligkeit' : 'Datum'
+}
 
 /** Common positions; picking one fills in a sensible category and interval. */
 const SUGGESTIONS: Array<{ name: string; category: string; interval?: Interval }> = [
@@ -54,15 +66,25 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
   const [entry, setEntry] = useState<Entry>(initial)
   const [amountText, setAmountText] = useState(amountInput(initial.amount))
   const [showErrors, setShowErrors] = useState(false)
+  const [extras, setExtras] = useState<ExtraDraft[]>(() =>
+    (initial.extraPayments ?? []).map((x) => ({ id: x.id, month: x.month, label: x.label, amountText: amountInput(x.amount) }))
+  )
 
   const categories = data.categories.filter((c) => c.kind === entry.kind)
   const amount = parseAmount(amountText)
+  const income = entry.kind === 'income'
+  const recurring = entry.interval !== 'once'
+  const parsedExtras: ExtraPayment[] = recurring
+    ? extras.map((x) => ({ id: x.id, month: x.month, label: x.label.trim(), amount: parseAmount(x.amountText) ?? 0 }))
+    : []
+  const extrasInvalid = parsedExtras.some((x) => x.amount <= 0)
 
   const errors = {
     name: !entry.name.trim() ? 'Bitte eine Bezeichnung eingeben.' : null,
     amount: amount === null || amount <= 0 ? 'Bitte einen Betrag größer als 0 eingeben.' : null,
     startDate: !isValidIso(entry.startDate) ? 'Bitte ein gültiges Datum wählen.' : null,
-    endDate: entry.endDate && entry.endDate < entry.startDate ? 'Das Enddatum liegt vor der ersten Fälligkeit.' : null
+    endDate: entry.endDate && entry.endDate < entry.startDate ? 'Das Enddatum liegt vor dem Startdatum.' : null,
+    extras: extrasInvalid ? 'Bitte für jede Sonderzahlung einen Betrag größer als 0 eingeben.' : null
   }
   const valid = !Object.values(errors).some(Boolean)
 
@@ -85,20 +107,26 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
   }
 
   const preview = useMemo(() => {
-    const probe = { ...entry, amount: amount ?? 0, paused: false }
+    const probe = { ...entry, amount: amount ?? 0, paused: false, extraPayments: parsedExtras.filter((x) => x.amount > 0) }
     return {
       monthly: monthlyEquivalent(probe),
       yearly: yearlyEquivalent(probe),
       next: isValidIso(probe.startDate) ? nextOccurrence(probe, todayIso()) : null
     }
-  }, [entry, amount])
+  }, [entry, amount, extras])
+
+  const addExtra = (label: string, month: number) =>
+    setExtras((list) => [...list, { id: newId('x'), month, label, amountText: amount ? amountInput(amount) : '' }])
+  const updateExtra = (id: string, patch: Partial<ExtraDraft>) => setExtras((list) => list.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+  const removeExtra = (id: string) => setExtras((list) => list.filter((x) => x.id !== id))
+  const hasLabel = (label: string) => extras.some((x) => x.label.trim().toLowerCase() === label.toLowerCase())
 
   const save = () => {
     if (!valid || amount === null) {
       setShowErrors(true)
       return
     }
-    const saved = { ...entry, name: entry.name.trim(), amount }
+    const saved = { ...entry, name: entry.name.trim(), amount, extraPayments: [...parsedExtras].sort((a, b) => a.month - b.month) }
     upsertEntry(saved)
     onSaved?.(saved)
     onClose()
@@ -204,7 +232,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
         </div>
 
         <div className="field s2">
-          <label htmlFor="f-start">{entry.interval === 'once' ? 'Datum' : 'Erste Fälligkeit'}</label>
+          <label htmlFor="f-start">{startLabel(income, recurring)}</label>
           <input
             id="f-start"
             type="date"
@@ -240,7 +268,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
         </div>
 
         <div className={`field ${entry.interval === 'once' ? 's2' : 's2'}`}>
-          <label htmlFor="f-provider">Anbieter / Empfänger</label>
+          <label htmlFor="f-provider">{income ? 'Zahler / Arbeitgeber' : 'Anbieter / Empfänger'}</label>
           <input id="f-provider" className="input" value={entry.provider} onChange={(e) => set('provider', e.target.value)} placeholder="optional" />
         </div>
 
@@ -276,6 +304,83 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           </>
         )}
 
+        {recurring && (
+          <>
+            <div className="section-label">Sonderzahlungen</div>
+            <div className="field s6">
+              <span className="help" style={{ marginTop: -6 }}>
+                {income
+                  ? 'Zusätzliche Zahlungen einmal im Jahr, z. B. 13. und 14. Monatsgehalt, Urlaubs- oder Weihnachtsgeld.'
+                  : 'Zusätzliche Zahlungen einmal im Jahr in einem festen Monat, z. B. eine Jahresgebühr.'}
+              </span>
+              {extras.length > 0 && (
+                <div className="extras">
+                  {extras.map((x) => (
+                    <div className="extra-row" key={x.id}>
+                      <input
+                        className="input"
+                        value={x.label}
+                        placeholder="Bezeichnung"
+                        aria-label="Bezeichnung der Sonderzahlung"
+                        onChange={(e) => updateExtra(x.id, { label: e.target.value })}
+                      />
+                      <select
+                        className="select"
+                        value={x.month}
+                        aria-label="Monat"
+                        onChange={(e) => updateExtra(x.id, { month: Number(e.target.value) })}
+                      >
+                        {MONTHS.map((name, i) => (
+                          <option key={name} value={i + 1}>
+                            im {name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="amount-input">
+                        <input
+                          className={`input num ${showErrors && (parseAmount(x.amountText) ?? 0) <= 0 ? 'invalid' : ''}`}
+                          value={x.amountText}
+                          placeholder="0,00"
+                          inputMode="decimal"
+                          aria-label="Betrag der Sonderzahlung"
+                          onChange={(e) => updateExtra(x.id, { amountText: e.target.value })}
+                          onBlur={() => {
+                            const v = parseAmount(x.amountText)
+                            if (v !== null) updateExtra(x.id, { amountText: amountInput(v) })
+                          }}
+                        />
+                        <span>€</span>
+                      </div>
+                      <button type="button" className="icon-btn danger" title="Entfernen" onClick={() => removeExtra(x.id)}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {err('extras')}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {income && !hasLabel('13. Gehalt') && (
+                  <button type="button" className="btn small" onClick={() => addExtra('13. Gehalt', 5)}>
+                    <Plus size={14} />
+                    13. Gehalt
+                  </button>
+                )}
+                {income && !hasLabel('14. Gehalt') && (
+                  <button type="button" className="btn small" onClick={() => addExtra('14. Gehalt', 11)}>
+                    <Plus size={14} />
+                    14. Gehalt
+                  </button>
+                )}
+                <button type="button" className="btn small ghost" onClick={() => addExtra(income ? 'Sonderzahlung' : 'Zusatzzahlung', 12)}>
+                  <Plus size={14} />
+                  {income ? 'Andere Sonderzahlung' : 'Zusatzzahlung'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="field s6">
           <label htmlFor="f-notes">Notizen</label>
           <textarea id="f-notes" className="textarea" value={entry.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Kundennummer, Vertragsdetails …" />
@@ -284,13 +389,13 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
         {entry.interval !== 'once' ? (
           <div className="preview-box">
             <span>
-              Pro Monat <strong className="num">{money(preview.monthly)}</strong>
+              {parsedExtras.length > 0 ? 'Ø pro Monat' : 'Pro Monat'} <strong className="num">{money(preview.monthly)}</strong>
             </span>
             <span>
-              Pro Jahr <strong className="num">{money(preview.yearly)}</strong>
+              Pro Jahr{parsedExtras.length > 0 ? ' inkl. Sonderzahlungen' : ''} <strong className="num">{money(preview.yearly)}</strong>
             </span>
             <span>
-              Nächste Fälligkeit <strong>{date(preview.next)}</strong>
+              {income ? 'Nächster Zahlungseingang' : 'Nächste Fälligkeit'} <strong>{date(preview.next)}</strong>
             </span>
           </div>
         ) : null}

@@ -91,7 +91,8 @@ export function DonutChart({
               cornerRadius={3}
               stroke={surface}
               strokeWidth={1}
-              isAnimationActive={false}
+              animationDuration={750}
+              animationEasing="ease-out"
             >
               {slices.map((s) => (
                 <Cell key={s.key} fill={s.color} />
@@ -231,19 +232,21 @@ export function StackedMonthChart({
             stroke={c.surface}
             strokeWidth={1}
             radius={i === series.length - 1 ? [4, 4, 0, 0] : 0}
-            isAnimationActive={false}
+            animationDuration={650}
+            animationEasing="ease-out"
             maxBarSize={44}
           />
         ))}
         {incomeKey && (
           <Line
             dataKey={incomeKey}
-            type="monotone"
+            type="linear"
             stroke={incomeColor}
             strokeWidth={2}
             dot={{ r: 3.5, fill: c.surface, strokeWidth: 2 }}
             activeDot={{ r: 5 }}
-            isAnimationActive={false}
+            animationDuration={800}
+            animationEasing="ease-out"
           />
         )}
       </ComposedChart>
@@ -277,7 +280,7 @@ export function GroupedBarChart({
           }}
         />
         {series.map((s) => (
-          <Bar key={s.key} dataKey={s.key} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+          <Bar key={s.key} dataKey={s.key} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={22} animationDuration={650} animationEasing="ease-out" />
         ))}
       </BarChart>
     </ResponsiveContainer>

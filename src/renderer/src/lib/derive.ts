@@ -1,6 +1,7 @@
 import type { AppData, Entry } from '@shared/types'
 import { daysBetween, monthlyEquivalent, nextOccurrence } from '@shared/calc'
 import { INTERVAL_LABELS } from '@shared/defaults'
+import { MONTHS } from './format'
 
 export type EntryStatus = 'active' | 'paused' | 'ended' | 'future' | 'once'
 
@@ -43,7 +44,8 @@ export function entriesToCsv(data: AppData, today: string): string {
     'Kategorie',
     'Betrag',
     'Intervall',
-    'Pro Monat',
+    'Ø pro Monat',
+    'Sonderzahlungen',
     'Erste Fälligkeit',
     'Läuft bis',
     'Nächste Fälligkeit',
@@ -62,6 +64,7 @@ export function entriesToCsv(data: AppData, today: string): string {
     e.amount,
     INTERVAL_LABELS[e.interval],
     monthlyEquivalent(e),
+    e.extraPayments.map((x) => `${x.label || 'Sonderzahlung'} ${MONTHS[x.month - 1]} ${x.amount.toFixed(2).replace('.', ',')}`).join(', '),
     e.startDate,
     e.endDate ?? '',
     nextOccurrence(e, today) ?? '',

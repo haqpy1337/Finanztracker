@@ -4,7 +4,10 @@ import { StoreProvider } from '@/lib/store'
 import { ToastProvider } from '@/lib/toast'
 import { EntryEditorProvider } from '@/components/EntryEditor'
 import { App } from './App'
+import { applyInitialTheme } from '@/lib/theme'
 import './styles.css'
+
+applyInitialTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

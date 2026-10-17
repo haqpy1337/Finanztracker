@@ -10,6 +10,8 @@ export interface Occurrence {
   entry: Entry
   date: string
   amount: number
+  /** Set for extra payments such as a 13th salary. */
+  extraLabel?: string
 }
 
 const MONTH_STEPS: Partial<Record<Interval, number>> = {
@@ -147,13 +149,37 @@ export function nextOccurrence(entry: Entry, fromIso: string, horizonDays = 800)
   return occurrencesBetween(entry, fromIso, addDays(fromIso, horizonDays))[0] ?? null
 }
 
-/** Average monthly amount of a recurring entry; one-off entries count as 0. */
+/** Sum of the yearly extra payments (13th/14th salary etc.) of a recurring entry. */
+export function extrasPerYear(entry: Entry): number {
+  if (entry.interval === 'once') return 0
+  return (entry.extraPayments ?? []).reduce((acc, x) => acc + x.amount, 0)
+}
+
+/** Average monthly amount of a recurring entry including extra payments; one-off entries count as 0. */
 export function monthlyEquivalent(entry: Entry): number {
-  return (entry.amount * PER_YEAR[entry.interval]) / 12
+  return yearlyEquivalent(entry) / 12
 }
 
 export function yearlyEquivalent(entry: Entry): number {
-  return entry.amount * PER_YEAR[entry.interval]
+  return entry.amount * PER_YEAR[entry.interval] + extrasPerYear(entry)
+}
+
+/** Extra payments of an entry that fall within [from, to]. They are due on the entry's usual day of month. */
+export function extraOccurrencesBetween(entry: Entry, from: string, to: string): Array<{ date: string; amount: number; label: string }> {
+  if (!isCounted(entry) || entry.interval === 'once' || !entry.extraPayments?.length || from > to) return []
+  const day = parseIso(entry.startDate).d
+  const first = parseIso(from).y
+  const last = parseIso(to).y
+  const out: Array<{ date: string; amount: number; label: string }> = []
+  for (let y = first; y <= last; y++) {
+    for (const x of entry.extraPayments) {
+      const date = toIso(y, x.month, Math.min(day, daysInMonth(y, x.month)))
+      if (date < from || date > to || date < entry.startDate) continue
+      if (entry.endDate && date > entry.endDate) continue
+      out.push({ date, amount: x.amount, label: x.label || 'Sonderzahlung' })
+    }
+  }
+  return out
 }
 
 export function occurrencesInRange(entries: Entry[], from: string, to: string, kind?: EntryKind): Occurrence[] {
@@ -162,6 +188,9 @@ export function occurrencesInRange(entries: Entry[], from: string, to: string, k
     if (kind && entry.kind !== kind) continue
     for (const date of occurrencesBetween(entry, from, to)) {
       out.push({ entry, date, amount: entry.amount })
+    }
+    for (const x of extraOccurrencesBetween(entry, from, to)) {
+      out.push({ entry, date: x.date, amount: x.amount, extraLabel: x.label })
     }
   }
   return out.sort((a, b) => (a.date === b.date ? a.entry.name.localeCompare(b.entry.name) : a.date < b.date ? -1 : 1))

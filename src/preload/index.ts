@@ -7,6 +7,7 @@ const api: FinanceApi = {
   exportJson: (data: AppData) => ipcRenderer.invoke('data:export-json', data),
   exportCsv: (csv: string) => ipcRenderer.invoke('data:export-csv', csv),
   importJson: () => ipcRenderer.invoke('data:import-json'),
+  backupNow: (reason: string) => ipcRenderer.invoke('data:backup', reason),
   openDataFolder: () => ipcRenderer.invoke('app:open-data-folder'),
   setTheme: (theme: ThemePreference) => ipcRenderer.invoke('app:set-theme', theme),
   getVersion: () => ipcRenderer.invoke('app:version'),
@@ -17,6 +18,15 @@ const api: FinanceApi = {
     ipcRenderer.on('update:status', handler)
     void ipcRenderer.invoke('update:last').then(listener)
     return () => ipcRenderer.removeListener('update:status', handler)
+  },
+  onFlushRequest: (flush: () => Promise<void>) => {
+    const handler = (): void => {
+      void flush()
+        .catch(() => undefined)
+        .finally(() => ipcRenderer.send('app:flushed'))
+    }
+    ipcRenderer.on('app:flush', handler)
+    return () => ipcRenderer.removeListener('app:flush', handler)
   }
 }
 
