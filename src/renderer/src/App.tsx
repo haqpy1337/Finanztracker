@@ -5,7 +5,6 @@ import { DarkContext, useAppliedTheme } from '@/lib/theme'
 import { Sidebar, type PageId } from '@/components/Sidebar'
 import { useEntryEditor } from '@/components/EntryEditor'
 import { Splash } from '@/components/Splash'
-import { useAppVersion } from '@/lib/updates'
 import { Overview } from '@/pages/Overview'
 import { MonthView } from '@/pages/MonthView'
 import { YearView } from '@/pages/YearView'
@@ -53,7 +52,6 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [editor])
 
-  const version = useAppVersion()
   // The first page animates in only once the start-up screen fades out.
   const [booted, setBooted] = useState(false)
   const onSplashExit = useCallback(() => setBooted(true), [])
@@ -101,7 +99,7 @@ export function App() {
   return (
     <DarkContext.Provider value={dark}>
       {content}
-      <Splash ready={loaded || Boolean(loadError)} version={version} onExit={onSplashExit} />
+      <Splash ready={loaded || Boolean(loadError)} onExit={onSplashExit} />
     </DarkContext.Provider>
   )
 }
