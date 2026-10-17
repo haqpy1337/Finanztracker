@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { CalendarDays, CalendarRange, Download, LayoutDashboard, List, RefreshCw, Settings, Tags, Wallet } from 'lucide-react'
+import { CalendarDays, CalendarRange, Download, LayoutDashboard, List, RefreshCw, Settings, Tags } from 'lucide-react'
 import { api } from '@/lib/api'
+import { Logo } from './Logo'
 import { useAppVersion, useUpdateStatus } from '@/lib/updates'
 
 export type PageId = 'overview' | 'month' | 'year' | 'entries' | 'categories' | 'settings'
@@ -63,7 +64,7 @@ export function Sidebar({ page, onNavigate }: { page: PageId; onNavigate(page: P
     <aside className="sidebar">
       <div className="brand">
         <div className="brand-mark">
-          <Wallet size={17} />
+          <Logo size={30} />
         </div>
         <div>
           <div className="brand-name">Finanztracker</div>

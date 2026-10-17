@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Wallet } from 'lucide-react'
+import { Logo } from './Logo'
 
 const MIN_VISIBLE_MS = 1150
 const EXIT_MS = 420
@@ -31,7 +31,7 @@ export function Splash({ ready, version, onExit }: { ready: boolean; version: st
     <div className={`splash ${phase === 'exit' ? 'exit' : ''}`} aria-hidden={phase === 'exit'}>
       <div className="splash-content">
         <div className="splash-mark">
-          <Wallet size={34} strokeWidth={1.9} />
+          <Logo size={76} />
         </div>
         <div className="splash-name">Finanztracker</div>
         <div className="splash-sub">Ausgaben im Blick</div>
