@@ -53,6 +53,7 @@ export async function checkForUpdates(): Promise<void> {
   }
 }
 
+/** Installs silently into the existing folder (no setup wizard) and starts the app again. */
 export function installUpdate(): void {
-  if (last.state === 'ready') autoUpdater.quitAndInstall(false, true)
+  if (last.state === 'ready') autoUpdater.quitAndInstall(true, true)
 }
