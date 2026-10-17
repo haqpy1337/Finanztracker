@@ -42,18 +42,24 @@ jobs:
             version="$(node -p "require('./package.json').version")"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # A release counts as done only once latest.yml (read by the updater) is attached.
-          assets="$(gh release view "v$version" --json assets --jq '.assets[].name' 2>/dev/null || true)"
-          if grep -qx "latest.yml" <<< "$assets"; then
-            echo "Release v$version already exists, nothing to publish."
+          # A release counts as done only once it is published with latest.yml (read by the updater).
+          tag="v$version"
+          published="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"$tag\" and .draft == false) | .assets[].name")"
+          if grep -qx "latest.yml" <<< "$published"; then
+            echo "Release $tag already exists, nothing to publish."
             echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
-            if gh release view "v$version" >/dev/null 2>&1; then
-              echo "Removing incomplete release v$version."
-              gh release delete "v$version" --cleanup-tag --yes
-            fi
-            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          # Remove leftovers of an earlier failed run (drafts and incomplete releases).
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$tag\") | .id"); do
+            echo "Removing incomplete release $id for $tag."
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+          done
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" >/dev/null 2>&1 || true
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         if: steps.version.outputs.publish == 'true'
@@ -62,6 +68,15 @@ jobs:
       - name: Test
         if: steps.version.outputs.publish == 'true'
         run: npm test
+
+      # Created up front: if electron-builder has to create the release itself, its
+      # parallel uploads can each create one and split the files across releases.
+      - name: Create draft release
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          gh release create "v$v" --draft --target "$GITHUB_SHA" --title "Finanztracker $v" --notes "Version $v"
 
       - name: Build installer and upload to draft release
         if: steps.version.outputs.publish == 'true'
