@@ -52,19 +52,20 @@ Aufbau:
 
 ## Neue Version veröffentlichen (Updates)
 
-Updates kommen aus den GitHub Releases dieses Repositorys. Ein neues Release entsteht,
-sobald ein Versions-Tag gepusht wird:
+Updates kommen aus den GitHub Releases dieses Repositorys. Für eine neue Version reicht es,
+die Versionsnummer in `package.json` zu erhöhen (z. B. auf `0.2.0`) und auf `main` zu pushen.
+Alternativ geht auch ein Tag:
 
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-Der Workflow `.github/workflows/release.yml` baut dann auf einem Windows-Runner den
-Installer, übernimmt die Versionsnummer aus dem Tag und veröffentlicht ihn samt
-`latest.yml` als Release. Installierte Apps finden die neue Version beim nächsten Start,
-laden sie im Hintergrund und installieren sie beim Beenden oder per Klick auf
-*Jetzt neu starten*.
+Der Workflow `.github/workflows/release.yml` prüft bei jedem Push, ob es für die Version
+schon ein Release gibt. Wenn nicht, baut er auf einem Windows-Runner den Installer und
+veröffentlicht ihn samt `latest.yml` als Release `v<Version>`. Installierte Apps finden die
+neue Version beim nächsten Start, laden sie im Hintergrund und installieren sie beim Beenden
+oder per Klick auf *Jetzt neu starten*.
 
 Damit das funktioniert, muss das Repository öffentlich bleiben, sonst können installierte
 Apps die Releases nicht abrufen.
