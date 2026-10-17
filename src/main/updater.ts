@@ -36,7 +36,9 @@ export function initUpdater(win: BrowserWindow): void {
   autoUpdater.on('update-downloaded', (info) => send({ state: 'ready', version: info.version }))
   autoUpdater.on('error', (err) => {
     log.error('Update failed', err)
-    send({ state: 'error', message: 'Die Update-Prüfung ist fehlgeschlagen. Bitte Internetverbindung prüfen.' })
+    const code = (err as { code?: string }).code
+    const detail = String(err?.message ?? err).split('\n')[0].slice(0, 300)
+    send({ state: 'error', message: 'Die Update-Prüfung ist fehlgeschlagen.', detail: code ? `${code}: ${detail}` : detail })
   })
 
   void checkForUpdates()

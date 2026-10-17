@@ -9,6 +9,7 @@ const api: FinanceApi = {
   importJson: () => ipcRenderer.invoke('data:import-json'),
   backupNow: (reason: string) => ipcRenderer.invoke('data:backup', reason),
   openDataFolder: () => ipcRenderer.invoke('app:open-data-folder'),
+  openLog: () => ipcRenderer.invoke('app:open-log'),
   setTheme: (theme: ThemePreference) => ipcRenderer.invoke('app:set-theme', theme),
   getVersion: () => ipcRenderer.invoke('app:version'),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),

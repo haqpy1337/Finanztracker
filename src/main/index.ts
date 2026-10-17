@@ -129,6 +129,9 @@ function registerIpc(): void {
     await fs.mkdir(dataDir(), { recursive: true })
     await shell.openPath(dataDir())
   })
+  ipcMain.handle('app:open-log', async () => {
+    await shell.openPath(log.transports.file.getFile().path)
+  })
   ipcMain.handle('app:set-theme', (_e, theme: ThemePreference) => {
     nativeTheme.themeSource = theme
   })

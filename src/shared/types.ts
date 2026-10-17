@@ -70,7 +70,7 @@ export type UpdateStatus =
   | { state: 'available'; version: string }
   | { state: 'downloading'; version: string; percent: number }
   | { state: 'ready'; version: string }
-  | { state: 'error'; message: string }
+  | { state: 'error'; message: string; detail?: string }
 
 export interface FinanceApi {
   loadData(): Promise<AppData | null>
@@ -81,6 +81,7 @@ export interface FinanceApi {
   /** Stores a permanent copy of the current data, e.g. before replacing it. */
   backupNow(reason: string): Promise<string | null>
   openDataFolder(): Promise<void>
+  openLog(): Promise<void>
   setTheme(theme: ThemePreference): Promise<void>
   getVersion(): Promise<string>
   checkForUpdates(): Promise<void>

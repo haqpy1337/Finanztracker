@@ -175,8 +175,16 @@ export function Settings() {
             <div>
               <div>Version {version}</div>
               <div className="desc">{describeUpdate(update)}</div>
+              {update.state === 'error' && update.detail && (
+                <div className="desc" style={{ fontFamily: 'Consolas, monospace', fontSize: 12, marginTop: 4, wordBreak: 'break-word' }}>
+                  {update.detail}
+                </div>
+              )}
             </div>
             <div className="controls">
+              <button className="btn ghost" onClick={() => void api.openLog()}>
+                Protokoll öffnen
+              </button>
               {update.state === 'ready' ? (
                 <button className="btn primary" onClick={() => void api.installUpdate()}>
                   Jetzt neu starten

@@ -41,6 +41,7 @@ const browserApi: FinanceApi = {
     return null
   },
   async openDataFolder() {},
+  async openLog() {},
   async setTheme() {},
   async getVersion() {
     return 'Vorschau'
