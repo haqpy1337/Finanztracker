@@ -1,0 +1,37 @@
+appId: com.haqpy1337.finanztracker
+productName: Finanztracker
+copyright: Copyright © 2026 haqpy1337
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: Finanztracker-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Finanztracker
+  deleteAppDataOnUninstall: false
+  installerLanguages:
+    - de_DE
+
+# Updates are published as GitHub Releases of this repository.
+publish:
+  provider: github
+  owner: haqpy1337
+  repo: Finanztracker
+  releaseType: release
