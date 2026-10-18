@@ -13,7 +13,6 @@ interface MonthDraft {
   countText: string
 }
 
-const UNITS = ['Woche', 'Tag', 'Stunde', 'Einsatz']
 
 /** Parses a unit count such as "2" or "1,5"; zero is allowed. */
 function parseCount(text: string): number | null {
@@ -89,7 +88,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
 
   const [varMode, setVarMode] = useState(!!initial.variable)
   const [rateText, setRateText] = useState(initial.variable ? amountInput(initial.variable.rate) : '')
-  const [unit, setUnit] = useState(initial.variable?.unit ?? 'Woche')
+  const [unit] = useState(initial.variable?.unit ?? 'Woche')
   const [usualText, setUsualText] = useState(String(initial.variable?.usual ?? 1).replace('.', ','))
   const [months, setMonths] = useState<MonthDraft[]>(() =>
     (initial.variable?.months ?? []).map((m) => ({ id: newId('v'), month: m.month, countText: String(m.count).replace('.', ',') }))
@@ -263,15 +262,15 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           <div className="field s6">
             <label className="check" style={{ fontWeight: 400, color: 'var(--text)', fontSize: 14 }}>
               <input type="checkbox" checked={varMode} onChange={(e) => setVarMode(e.target.checked)} />
-              Schwankender Betrag (z. B. Rufbereitschaft: Betrag pro Woche × Anzahl)
+              Rufbereitschaft / Betrag pro Woche (Anzahl Wochen kann schwanken)
             </label>
           </div>
         )}
 
         {variableOn ? (
           <>
-            <div className="field s2">
-              <label htmlFor="f-rate">Betrag pro Einheit</label>
+            <div className="field">
+              <label htmlFor="f-rate">Betrag pro {unit}</label>
               <div className="amount-input">
                 <input
                   id="f-rate"
@@ -286,16 +285,8 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
               </div>
               {err('rate')}
             </div>
-            <div className="field s2">
-              <label htmlFor="f-unit">Einheit</label>
-              <select id="f-unit" className="select" value={unit} onChange={(e) => setUnit(e.target.value)}>
-                {(UNITS.includes(unit) ? UNITS : [...UNITS, unit]).map((u) => (
-                  <option key={u}>{u}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field s2">
-              <label htmlFor="f-usual">Üblich pro Monat</label>
+            <div className="field">
+              <label htmlFor="f-usual">{unit}n pro Monat</label>
               <input
                 id="f-usual"
                 className={`input num ${showErrors && errors.usual ? 'invalid' : ''}`}
@@ -305,11 +296,6 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
                 placeholder="1"
               />
               {err('usual')}
-            </div>
-            <div className="field s6">
-              <span className="help" style={{ marginTop: -6 }}>
-                Wird jeden Monat am selben Tag gebucht. Weicht ein Monat ab, trage ihn unten ein.
-              </span>
             </div>
           </>
         ) : (
@@ -418,13 +404,10 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
         )}
 
         {variableOn && (
-          <>
-            <div className="section-label">Abweichende Monate</div>
-            <div className="field s6">
-              <span className="help" style={{ marginTop: -6 }}>
-                Nur nötig, wenn in einem Monat mehr oder weniger als üblich anfällt, z. B. 2 Wochen im November oder 0 im Urlaub.
-              </span>
-              {months.length > 0 && (
+          <div className="field s6">
+            {months.length > 0 && (
+              <>
+                <label>Abweichende Monate</label>
                 <div className="extras">
                   {months.map((m) => (
                     <div className="extra-row" key={m.id}>
@@ -444,7 +427,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
                           aria-label={`Anzahl ${unit}`}
                           onChange={(e) => setMonths((l) => l.map((x) => (x.id === m.id ? { ...x, countText: e.target.value } : x)))}
                         />
-                        <span className="text-2">{unit}</span>
+                        <span className="text-2">{unit}n</span>
                       </div>
                       <button type="button" className="icon-btn danger" title="Entfernen" onClick={() => setMonths((l) => l.filter((x) => x.id !== m.id))}>
                         <X size={16} />
@@ -452,20 +435,20 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
                     </div>
                   ))}
                 </div>
-              )}
-              {err('months')}
-              <div>
-                <button
-                  type="button"
-                  className="btn small"
-                  onClick={() => setMonths((l) => [...l, { id: newId('v'), month: todayIso().slice(0, 7), countText: String(usual ?? 1).replace('.', ',') }])}
-                >
-                  <Plus size={14} />
-                  Abweichenden Monat hinzufügen
-                </button>
-              </div>
+              </>
+            )}
+            {err('months')}
+            <div>
+              <button
+                type="button"
+                className="btn small ghost"
+                onClick={() => setMonths((l) => [...l, { id: newId('v'), month: todayIso().slice(0, 7), countText: String(usual ?? 1).replace('.', ',') }])}
+              >
+                <Plus size={14} />
+                Einen Monat anders eintragen
+              </button>
             </div>
-          </>
+          </div>
         )}
 
         {recurring && !variableOn && (
