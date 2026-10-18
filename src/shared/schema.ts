@@ -9,8 +9,9 @@
  *   2  0.2.0  entries gain `extraPayments` (13th/14th salary and similar)
  *   3  0.3.0  entries gain `variable` (income that varies per month, e.g. on-call duty)
  *   4  0.3.1  new top-level list `assets` (investments and valuables); entries are untouched
+ *   5  0.4.1  entries gain `foreign` (amount originally entered in US dollars); existing entries get null
  */
-export const CURRENT_SCHEMA = 4
+export const CURRENT_SCHEMA = 5
 
 /** Thrown when the data was written by a newer app version than this one. */
 export class NewerSchemaError extends Error {
@@ -42,7 +43,14 @@ const STEPS: Record<number, Step> = {
       : data.entries
   }),
   // 3 -> 4: an empty list of assets is added; entries and categories stay exactly as they are.
-  3: (data) => ({ assets: [], ...data })
+  3: (data) => ({ assets: [], ...data }),
+  // 4 -> 5: entries get `foreign: null`, i.e. every existing amount stays a euro amount, unchanged.
+  4: (data) => ({
+    ...data,
+    entries: Array.isArray(data.entries)
+      ? data.entries.map((e) => (e && typeof e === 'object' ? { foreign: null, ...(e as Raw) } : e))
+      : data.entries
+  })
 }
 
 export function schemaOf(raw: unknown): number {

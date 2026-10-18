@@ -6,7 +6,7 @@ import { INTERVAL_LABELS } from '@shared/defaults'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/lib/toast'
 import { api } from '@/lib/api'
-import { date, money, MONTHS } from '@/lib/format'
+import { date, foreignTitle, money, MONTHS, usdMoney } from '@/lib/format'
 import { entriesToCsv, entryStatus, STATUS_LABELS, type EntryStatus } from '@/lib/derive'
 import { Card, CategoryLabel, EmptyState, PageHeader, Segmented } from '@/components/ui'
 import { useEntryEditor } from '@/components/EntryEditor'
@@ -209,6 +209,11 @@ export function Entries() {
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <span className={`badge ${STATUS_BADGE[st]}`}>{STATUS_LABELS[st]}</span>
                         {e.estimated && <span className="badge warn">geschätzt</span>}
+                        {e.foreign && (
+                          <span className="badge" title={foreignTitle(e.foreign)}>
+                            {usdMoney(e.foreign.amount)}
+                          </span>
+                        )}
                         {e.variable && (
                           <span
                             className="badge accent"

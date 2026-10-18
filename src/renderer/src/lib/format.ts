@@ -1,4 +1,5 @@
 import { parseIso } from '@shared/calc'
+import type { ForeignAmount } from '@shared/types'
 
 const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 const eurShort = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -10,6 +11,19 @@ const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
 export function money(value: number): string {
   return eur.format(value)
+}
+
+const usd = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'USD' })
+const rateFormat = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 8, useGrouping: false })
+
+export function usdMoney(value: number): string {
+  return usd.format(value)
+}
+
+/** "Eingegeben: 10,00 $ · Kurs 1 € = 1,0850 $ vom 16.10.2026 (live)" */
+export function foreignTitle(f: ForeignAmount): string {
+  const source = f.source === 'live' ? 'Live-Kurs' : f.source === 'cached' ? 'zuletzt geladener Kurs' : 'von Hand eingetragen'
+  return `Eingegeben: ${usd.format(f.amount)} · Kurs 1 € = ${rateFormat.format(f.rate)} $${f.rateDate ? ` vom ${date(f.rateDate)}` : ''} (${source})`
 }
 
 export function moneyShort(value: number): string {

@@ -1787,3 +1787,64 @@ tr:hover .row-actions {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Currency switch and exchange rate in the entry dialog */
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.segmented.mini {
+  padding: 2px;
+}
+
+.segmented.mini button {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.segmented.mini button.active {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.rate-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rate-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rate-dot.pulse {
+  animation: rate-pulse 1s ease-in-out infinite;
+}
+
+@keyframes rate-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.rate-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.rate-input .input {
+  width: 110px;
+  text-align: right;
+}

@@ -5,6 +5,7 @@ import log from 'electron-log/main'
 import { normalizeData } from '@shared/defaults'
 import type { AppData, ThemePreference } from '@shared/types'
 import { backupOnStart, createBackup, dataDir, loadData, saveData, waitForWrites } from './storage'
+import { getUsdRate } from './fx'
 import { checkForUpdates, initUpdater, installUpdate, lastUpdateStatus } from './updater'
 
 log.initialize()
@@ -145,6 +146,7 @@ function registerIpc(): void {
     installUpdate()
   })
   ipcMain.handle('update:last', () => lastUpdateStatus())
+  ipcMain.handle('fx:usd', (_e, refresh?: boolean) => getUsdRate(refresh === true))
 }
 
 if (!app.requestSingleInstanceLock()) {

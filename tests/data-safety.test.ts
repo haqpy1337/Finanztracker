@@ -13,7 +13,7 @@ describe('upgrading data from 0.1.0', () => {
   it('keeps every entry with all its values unchanged', () => {
     expect(upgraded.entries).toHaveLength(v010.entries.length)
     v010.entries.forEach((original: Record<string, unknown>, i: number) => {
-      expect(upgraded.entries[i]).toEqual({ ...original, extraPayments: [], variable: null })
+      expect(upgraded.entries[i]).toEqual({ ...original, extraPayments: [], variable: null, foreign: null })
     })
   })
 
@@ -68,7 +68,7 @@ describe('upgrading data from format 2', () => {
     v2.entries = v2.entries.map((e: Record<string, unknown>) => ({ ...e, extraPayments: [{ id: 'x', month: 5, amount: 1, label: 'a' }] }))
     expect(migrate(v2).from).toBe(2)
     const up = normalizeData(v2)
-    up.entries.forEach((e, i) => expect(e).toEqual({ ...v2.entries[i], variable: null }))
+    up.entries.forEach((e, i) => expect(e).toEqual({ ...v2.entries[i], variable: null, foreign: null }))
     expect(up.categories).toEqual(v2.categories)
   })
 
@@ -92,14 +92,20 @@ describe('upgrading data from format 3 (0.3.0) to 4 (assets)', () => {
     up.entries.forEach((e, i) => {
       const original = v3.entries[i]
       // Variable incomes store the usual monthly amount, exactly as 0.3.0 did.
-      expect(e).toEqual(original.variable ? { ...original, amount: 500, interval: 'monthly' } : original)
+      expect(e).toEqual({ ...(original.variable ? { ...original, amount: 500, interval: 'monthly' } : original), foreign: null })
     })
     expect(up.categories).toEqual(v3.categories)
     expect(up.settings).toEqual(v3.settings)
   })
 
   it('only adds an empty list of assets', () => {
-    expect(migrate(v3).data).toEqual({ ...v3, schemaVersion: 4, assets: [] })
+    expect(migrate(v3).data).toEqual({
+      ...v3,
+      schemaVersion: CURRENT_SCHEMA,
+      assets: [],
+      // added by the later step 4 -> 5
+      entries: v3.entries.map((e: Record<string, unknown>) => ({ ...e, foreign: null }))
+    })
     expect(normalizeData(v3).assets).toEqual([])
   })
 })
