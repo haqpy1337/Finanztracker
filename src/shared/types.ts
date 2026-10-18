@@ -1,4 +1,5 @@
 import type { UsdQuote } from './fx'
+import type { PsaLookup } from './psa'
 
 export type EntryKind = 'expense' | 'income'
 
@@ -170,4 +171,6 @@ export interface FinanceApi {
   onFlushRequest(flush: () => Promise<void>): () => void
   /** Current ECB rate for US dollars; `refresh` skips the short in-memory cache. */
   getUsdRate(refresh?: boolean): Promise<UsdQuote>
+  /** Reads card, grade and "PSA Estimate" from the public PSA certificate page. */
+  lookupPsaCert(cert: string): Promise<PsaLookup>
 }

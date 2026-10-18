@@ -1848,3 +1848,31 @@ tr:hover .row-actions {
   width: 110px;
   text-align: right;
 }
+
+/* PSA lookup */
+
+.psa-lookup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.psa-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  width: 100%;
+}
+
+.psa-result a {
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}

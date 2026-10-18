@@ -5,7 +5,9 @@ import { isValidIso, todayIso } from '@shared/calc'
 import { assetPoints, stateAt } from '@shared/assets'
 import { newId } from '@shared/defaults'
 import { amountInput, date, money, parseAmount, signedMoney, signedPercent } from '@/lib/format'
+import { cleanCertNumber } from '@shared/psa'
 import { Dialog } from './ui'
+import { PsaLookupButton } from './PsaLookup'
 
 interface Props {
   asset: Asset
@@ -125,6 +127,20 @@ export function ValuationDialog({ asset, valuation, onClose, onSave }: Props) {
             <span>€</span>
           </div>
         </div>
+        {isNew && asset.type === 'collectible' && cleanCertNumber(asset.certificate) && (
+          <div className="field s6">
+            <PsaLookupButton
+              certificate={asset.certificate}
+              appliedText="Die Schätzung wurde als Wert von heute eingetragen; du kannst sie vor dem Speichern noch anpassen."
+              onResult={(r) => {
+                if (r.eur === null) return
+                setDay(todayIso())
+                setValueText(amountInput(r.eur) || '0,00')
+                setNote(r.note)
+              }}
+            />
+          </div>
+        )}
         {(err('day') || err('value')) && (
           <div className="field s6">
             {err('day')}

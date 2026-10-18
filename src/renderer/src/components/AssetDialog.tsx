@@ -6,6 +6,7 @@ import { ASSET_TYPE_LABELS, ASSET_TYPES, isItemType } from '@shared/assets'
 import { newId } from '@shared/defaults'
 import { amountInput, money, parseAmount, parseQuantity, quantityInput, signedMoney, signedPercent } from '@/lib/format'
 import { Dialog } from './ui'
+import { PsaLookupButton, type PsaResult } from './PsaLookup'
 
 export const ASSET_TYPE_ICONS: Record<AssetType, ReactNode> = {
   etf: <LineChart size={17} />,
@@ -49,6 +50,8 @@ export function AssetDialog({ initial, isNew, onClose, onSave, onDelete }: Props
   const [saleDate, setSaleDate] = useState(initial.sale?.date ?? todayIso())
   const [saleText, setSaleText] = useState(initial.sale ? amountInput(initial.sale.value) : '')
   const [showErrors, setShowErrors] = useState(false)
+  /** Note for the first value when it came from the PSA estimate. */
+  const [psaNote, setPsaNote] = useState<{ value: number; note: string } | null>(null)
 
   const item = isItemType(asset.type)
   const price = parseAmount(priceText)
@@ -80,7 +83,9 @@ export function AssetDialog({ initial, isNew, onClose, onSave, onDelete }: Props
       return
     }
     const valuations = [...asset.valuations]
-    if (isNew && current !== null) valuations.push({ id: newId('v'), date: today, value: current, invested: null, note: '' })
+    if (isNew && current !== null) {
+      valuations.push({ id: newId('v'), date: today, value: current, invested: null, note: psaNote?.value === current ? psaNote.note : '' })
+    }
     onSave({
       ...asset,
       name: asset.name.trim(),
@@ -94,6 +99,30 @@ export function AssetDialog({ initial, isNew, onClose, onSave, onDelete }: Props
       valuations,
       sale: sold && saleValue !== null ? { date: saleDate, value: saleValue } : null
     })
+  }
+
+  const applyPsa = (r: PsaResult) => {
+    setAsset((a) => {
+      const next = {
+        ...a,
+        name: a.name.trim() ? a.name : r.cert.title,
+        description: r.cert.title || a.description,
+        grading: r.cert.grading,
+        certificate: r.cert.cert
+      }
+      // An existing card gets the estimate as today's value (replacing an earlier PSA value from today).
+      if (!isNew && r.eur !== null && !a.sale) {
+        const kept = a.valuations.filter((v) => !(v.date === today && v.note.startsWith('PSA-Schätzung')))
+        next.valuations = [...kept, { id: newId('v'), date: today, value: r.eur, invested: null, note: r.note }].sort((x, y) =>
+          x.date < y.date ? -1 : x.date > y.date ? 1 : 0
+        )
+      }
+      return next
+    })
+    if (isNew && r.eur !== null) {
+      setCurrentText(amountInput(r.eur) || '0,00')
+      setPsaNote({ value: r.eur, note: r.note })
+    }
   }
 
   const err = (key: keyof typeof errors) => (showErrors && errors[key] ? <span className="error">{errors[key]}</span> : null)
@@ -208,6 +237,21 @@ export function AssetDialog({ initial, isNew, onClose, onSave, onDelete }: Props
               <label htmlFor="a-cert">Zertifikats- / Seriennummer</label>
               <input id="a-cert" className="input" value={asset.certificate} onChange={(e) => set('certificate', e.target.value)} placeholder="optional" />
             </div>
+            {asset.type === 'collectible' && (
+              <div className="field s6">
+                <PsaLookupButton
+                  certificate={asset.certificate}
+                  onResult={applyPsa}
+                  appliedText={
+                    isNew
+                      ? 'Bezeichnung, Beschreibung, Grading und „Wert heute“ wurden ausgefüllt.'
+                      : asset.sale
+                        ? 'Kartendaten wurden übernommen.'
+                        : 'Kartendaten übernommen; die Schätzung wird beim Speichern als Wertstand von heute eingetragen.'
+                  }
+                />
+              </div>
+            )}
           </>
         ) : (
           <>
