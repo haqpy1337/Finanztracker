@@ -86,7 +86,10 @@ const browserApi: FinanceApi = {
   onFlushRequest() {
     return () => undefined
   },
-  getUsdRate: () => previewUsdRate()
+  getUsdRate: () => previewUsdRate(),
+  async lookupPsaCert() {
+    return { ok: false, error: 'Die PSA-Abfrage funktioniert nur in der installierten App.' }
+  }
 }
 
 export const api: FinanceApi = window.finance ?? browserApi

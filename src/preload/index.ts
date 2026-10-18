@@ -21,6 +21,7 @@ const api: FinanceApi = {
     return () => ipcRenderer.removeListener('update:status', handler)
   },
   getUsdRate: (refresh?: boolean) => ipcRenderer.invoke('fx:usd', refresh),
+  lookupPsaCert: (cert: string) => ipcRenderer.invoke('psa:cert', cert),
   onFlushRequest: (flush: () => Promise<void>) => {
     const handler = (): void => {
       void flush()

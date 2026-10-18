@@ -32,6 +32,11 @@ Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen P
   jederzeit neue Wertstände ergänzen (bei Sparplänen optional mit eingezahltem Betrag). Auswertung
   mit Gesamtwert, Gewinn/Verlust in Euro und Prozent, Verlauf über die Zeit, Aufteilung nach Art,
   Gewinn/Verlust je Anlage und Detailansicht pro Anlage; Verkäufe schreiben den Gewinn fest.
+- **PSA-Abfrage** für gegradete Karten: Zertifikatsnummer eintragen und „Von PSA abrufen“
+  klicken. Moo liest die öffentliche PSA-Zertifikatsseite und übernimmt Karte, Grading und die
+  „PSA Estimate“ (in Dollar, mit Tageskurs in Euro umgerechnet) als Wert. Das geht beim Anlegen
+  und bei „Wert aktualisieren“. PSA bietet den Wert nicht über eine Schnittstelle an; ändert PSA
+  die Seite, kann die Abfrage ausfallen, der Wert lässt sich dann weiter von Hand eintragen.
 - **Kategorien** frei anpassbar, **Einstellungen** für Hell/Dunkel, Monatsbudget,
   Export/Import und Beispieldaten.
 - **Automatische Updates** beim Start über GitHub Releases.
