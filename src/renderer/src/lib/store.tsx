@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { emptyData, newId } from '@shared/defaults'
-import type { AppData, Category, Entry, Settings } from '@shared/types'
+import type { AppData, Asset, Category, Entry, Settings } from '@shared/types'
 import { api } from './api'
 import { resolveCategorySlots } from './palette'
 
@@ -16,6 +16,8 @@ interface Store {
   /** Deletes a category and moves its entries to `moveTo`. */
   deleteCategory(id: string, moveTo: string): void
   updateSettings(patch: Partial<Settings>): void
+  upsertAsset(asset: Asset): void
+  deleteAsset(id: string): void
   categoryById(id: string): Category | undefined
   /** Palette slot actually used for a category on screen. */
   colorSlot(id: string): number
@@ -119,6 +121,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           entries: prev.entries.map((e) => (e.categoryId === id ? { ...e, categoryId: moveTo } : e))
         })),
       updateSettings: (patch) => commit((prev) => ({ ...prev, settings: { ...prev.settings, ...patch } })),
+      upsertAsset: (asset) =>
+        commit((prev) => {
+          const stamped = { ...asset, updatedAt: new Date().toISOString() }
+          const exists = prev.assets.some((a) => a.id === asset.id)
+          return { ...prev, assets: exists ? prev.assets.map((a) => (a.id === asset.id ? stamped : a)) : [...prev.assets, stamped] }
+        }),
+      deleteAsset: (id) => commit((prev) => ({ ...prev, assets: prev.assets.filter((a) => a.id !== id) })),
       categoryById: (id) => categoryMap.get(id),
       colorSlot: (id) => slots.get(id) ?? 0
     }

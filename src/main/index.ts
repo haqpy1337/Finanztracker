@@ -97,11 +97,12 @@ function registerIpc(): void {
     return result.filePath
   })
 
-  ipcMain.handle('data:export-csv', async (_e, csv: string) => {
+  ipcMain.handle('data:export-csv', async (_e, csv: string, name?: string) => {
     const stamp = new Date().toISOString().slice(0, 10)
+    const prefix = typeof name === 'string' && /^[\w-]{1,60}$/.test(name) ? name : 'Finanztracker-Posten'
     const result = await dialog.showSaveDialog(mainWindow!, {
       title: 'Als CSV exportieren',
-      defaultPath: `Finanztracker-Posten-${stamp}.csv`,
+      defaultPath: `${prefix}-${stamp}.csv`,
       filters: [{ name: 'CSV (Excel)', extensions: ['csv'] }]
     })
     if (result.canceled || !result.filePath) return null

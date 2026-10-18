@@ -9,11 +9,12 @@ import { Overview } from '@/pages/Overview'
 import { MonthView } from '@/pages/MonthView'
 import { YearView } from '@/pages/YearView'
 import { Entries } from '@/pages/Entries'
+import { Assets } from '@/pages/Assets'
 import { Categories } from '@/pages/Categories'
 import { Settings } from '@/pages/Settings'
 
 const PAGE_KEY = 'finanztracker-page'
-const PAGES: PageId[] = ['overview', 'month', 'year', 'entries', 'categories', 'settings']
+const PAGES: PageId[] = ['overview', 'month', 'year', 'assets', 'entries', 'categories', 'settings']
 
 function initialPage(): PageId {
   try {
@@ -87,6 +88,7 @@ export function App() {
             {page === 'overview' && <Overview />}
             {page === 'month' && <MonthView />}
             {page === 'year' && <YearView />}
+            {page === 'assets' && <Assets />}
             {page === 'entries' && <Entries />}
             {page === 'categories' && <Categories />}
             {page === 'settings' && <Settings />}

@@ -76,3 +76,80 @@ describe('upgrading data from format 2', () => {
     expect(() => normalizeData({ ...v010, schemaVersion: CURRENT_SCHEMA + 1 })).toThrow(NewerSchemaError)
   })
 })
+
+describe('upgrading data from format 3 (0.3.0) to 4 (assets)', () => {
+  const v3 = { ...JSON.parse(JSON.stringify(v010)), schemaVersion: 3 }
+  v3.entries = v3.entries.map((e: Record<string, unknown>) => ({
+    ...e,
+    extraPayments: [],
+    variable: e.kind === 'income' ? { rate: 500, unit: 'Woche', usual: 1, months: [{ month: '2026-11', count: 2 }] } : null
+  }))
+
+  it('keeps every entry, category and setting exactly as it was', () => {
+    const up = normalizeData(v3)
+    expect(migrate(v3).from).toBe(3)
+    expect(up.entries).toHaveLength(v3.entries.length)
+    up.entries.forEach((e, i) => {
+      const original = v3.entries[i]
+      // Variable incomes store the usual monthly amount, exactly as 0.3.0 did.
+      expect(e).toEqual(original.variable ? { ...original, amount: 500, interval: 'monthly' } : original)
+    })
+    expect(up.categories).toEqual(v3.categories)
+    expect(up.settings).toEqual(v3.settings)
+  })
+
+  it('only adds an empty list of assets', () => {
+    expect(migrate(v3).data).toEqual({ ...v3, schemaVersion: 4, assets: [] })
+    expect(normalizeData(v3).assets).toEqual([])
+  })
+})
+
+describe('assets are stored safely', () => {
+  const asset = {
+    id: 'a-1',
+    type: 'collectible',
+    name: 'Glurak Holo',
+    provider: 'eBay',
+    identifier: '',
+    quantity: null,
+    purchaseDate: '2025-03-20',
+    purchaseValue: 850,
+    valuations: [
+      { id: 'v-2', date: '2026-09-01', value: 1150, invested: null, note: 'Cardmarket' },
+      { id: 'v-1', date: '2025-11-15', value: 920, invested: null, note: '' }
+    ],
+    description: 'Base Set 4/102',
+    grading: 'PSA 9',
+    certificate: '81234567',
+    notes: '',
+    sale: null,
+    createdAt: '2026-10-18T10:00:00.000Z',
+    updatedAt: '2026-10-18T10:00:00.000Z'
+  }
+  const data = { ...v010, schemaVersion: 4, assets: [asset] }
+
+  it('keeps every value of an asset and sorts the value updates by date', () => {
+    const [a] = normalizeData(data).assets
+    expect(a).toEqual({ ...asset, valuations: [asset.valuations[1], asset.valuations[0]] })
+  })
+
+  it('does not change assets when saved again', () => {
+    const once = normalizeData(data)
+    expect(normalizeData(JSON.parse(JSON.stringify(once)))).toEqual(once)
+  })
+
+  it('keeps fields it does not know, on assets and on value updates', () => {
+    const withFuture = { ...data, assets: [{ ...asset, futureField: 1, valuations: [{ ...asset.valuations[0], currency: 'EUR' }] }] }
+    const [a] = normalizeData(withFuture).assets as unknown as Array<Record<string, unknown>>
+    expect(a.futureField).toBe(1)
+    expect((a.valuations as Array<Record<string, unknown>>)[0].currency).toBe('EUR')
+  })
+
+  it('repairs broken values instead of dropping the asset', () => {
+    const [a] = normalizeData({ ...data, assets: [{ ...asset, type: 'rocket', purchaseValue: 'x', valuations: [{ date: 'kaputt', value: 1 }, { date: '2026-01-01', value: 5 }] }] }).assets
+    expect(a.name).toBe('Glurak Holo')
+    expect(a.type).toBe('other')
+    expect(a.purchaseValue).toBe(0)
+    expect(a.valuations.map((v) => v.value)).toEqual([5])
+  })
+})

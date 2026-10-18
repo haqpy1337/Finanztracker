@@ -1,4 +1,5 @@
-import type { AppData, FinanceApi, UpdateStatus } from '@shared/types'
+import type { FinanceApi, UpdateStatus } from '@shared/types'
+import { normalizeData } from '@shared/defaults'
 
 declare global {
   interface Window {
@@ -16,7 +17,7 @@ const browserApi: FinanceApi = {
   async loadData() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      return raw ? (JSON.parse(raw) as AppData) : null
+      return raw ? normalizeData(JSON.parse(raw)) : null
     } catch {
       return null
     }

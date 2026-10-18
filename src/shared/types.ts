@@ -62,6 +62,50 @@ export interface VariablePay {
   months: Array<{ month: string; count: number }>
 }
 
+export type AssetType = 'etf' | 'stock' | 'fund' | 'crypto' | 'metal' | 'cash' | 'collectible' | 'other'
+
+/** A recorded value of an asset at a given day. */
+export interface AssetValuation {
+  id: string
+  /** YYYY-MM-DD */
+  date: string
+  /** Total value of the holding on that day. */
+  value: number
+  /** Total amount paid in up to that day, e.g. with a savings plan. null keeps the previous amount. */
+  invested: number | null
+  note: string
+}
+
+/** An investment or valuable item, tracked separately from income and expenses. */
+export interface Asset {
+  id: string
+  type: AssetType
+  name: string
+  /** Broker, platform or shop, e.g. "Trade Republic". */
+  provider: string
+  /** ISIN, WKN, ticker or similar. */
+  identifier: string
+  /** Number of shares or pieces; null if not tracked. */
+  quantity: number | null
+  /** YYYY-MM-DD */
+  purchaseDate: string
+  /** Purchase price including fees. */
+  purchaseValue: number
+  /** Value updates, oldest first. */
+  valuations: AssetValuation[]
+  /** For items: what exactly it is, e.g. "Glurak, Base Set, 1. Edition". */
+  description: string
+  /** For items: grading or condition, e.g. "PSA 10". */
+  grading: string
+  /** For items: certificate or serial number. */
+  certificate: string
+  notes: string
+  /** Set once the asset was sold; the gain is frozen from then on. */
+  sale: { date: string; value: number } | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Settings {
   theme: ThemePreference
   /** Optional monthly spending limit; 0 disables it. */
@@ -69,9 +113,11 @@ export interface Settings {
 }
 
 export interface AppData {
-  schemaVersion: 3
+  schemaVersion: 4
   categories: Category[]
   entries: Entry[]
+  /** Investments and valuables, separate from income and expenses. */
+  assets: Asset[]
   settings: Settings
 }
 
@@ -89,7 +135,8 @@ export interface FinanceApi {
   loadData(): Promise<AppData | null>
   saveData(data: AppData): Promise<void>
   exportJson(data: AppData): Promise<string | null>
-  exportCsv(csv: string): Promise<string | null>
+  /** `name` is the start of the suggested file name, e.g. "Finanztracker-Anlagen". */
+  exportCsv(csv: string, name?: string): Promise<string | null>
   importJson(): Promise<AppData | null>
   /** Stores a permanent copy of the current data, e.g. before replacing it. */
   backupNow(reason: string): Promise<string | null>

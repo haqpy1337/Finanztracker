@@ -1,6 +1,7 @@
-import type { AppData, Entry } from '@shared/types'
+import type { AppData, Asset, Entry } from '@shared/types'
 import { daysBetween, monthlyEquivalent, nextOccurrence } from '@shared/calc'
 import { INTERVAL_LABELS } from '@shared/defaults'
+import { ASSET_TYPE_LABELS, summarize } from '@shared/assets'
 import { MONTHS } from './format'
 
 export type EntryStatus = 'active' | 'paused' | 'ended' | 'future' | 'once'
@@ -81,4 +82,34 @@ export function entriesToCsv(data: AppData, today: string): string {
     e.notes
   ])
   return [header, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n')
+}
+
+/** All assets with their current value, one row each, plus every value update below in a second block. */
+export function assetsToCsv(assets: Asset[], today: string): string {
+  const header = ['Art', 'Bezeichnung', 'Depot / Gekauft bei', 'ISIN / Kürzel', 'Anzahl', 'Beschreibung', 'Grading', 'Zertifikatsnummer', 'Kaufdatum', 'Kaufpreis', 'Eingezahlt', 'Wert', 'Gewinn/Verlust', 'Gewinn/Verlust %', 'Letzter Stand', 'Verkauft am', 'Notizen']
+  const rows = assets.map((a) => {
+    const s = summarize(a, today)
+    return [
+      ASSET_TYPE_LABELS[a.type],
+      a.name,
+      a.provider,
+      a.identifier,
+      a.quantity === null ? '' : String(a.quantity).replace('.', ','),
+      a.description,
+      a.grading,
+      a.certificate,
+      a.purchaseDate,
+      a.purchaseValue,
+      s.invested,
+      s.value,
+      s.gain,
+      s.gainPercent === null ? '' : s.gainPercent,
+      s.lastDate,
+      a.sale?.date ?? '',
+      a.notes
+    ]
+  })
+  const history: Array<Array<string | number>> = [['Anlage', 'Datum', 'Wert', 'Insgesamt eingezahlt', 'Notiz']]
+  for (const a of assets) for (const v of a.valuations) history.push([a.name, v.date, v.value, v.invested ?? '', v.note])
+  return [header, ...rows, [], ...history].map((r) => r.map(csvCell).join(';')).join('\r\n')
 }
