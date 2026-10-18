@@ -1,17 +1,33 @@
-/** The app mark: a closed three-colour ring (donut chart) on a dark tile. Same artwork as build/icon.svg. */
-export function Logo({ size }: { size: number }) {
+/**
+ * The Moo wordmark: a stroked "M", a plain "o" and a blue "o" with horns and
+ * nostrils, the cow's head. The splash animates the same shapes, and
+ * build/icon.svg uses the head alone.
+ */
+export const MOO = {
+  viewBox: '-12 -10 314 128',
+  m: 'M8 100 V12 L48 64 L88 12 V100',
+  o: { cx: 151, cy: 66, r: 34 },
+  head: { cx: 248, cy: 66, r: 34 },
+  horns: ['M227.1 39.2 Q206 38.5 210.1 14.7', 'M268.9 39.2 Q290 38.5 285.9 14.7'],
+  nostrils: [
+    { cx: 237.8, cy: 74.5, rx: 4.1, ry: 5.8 },
+    { cx: 258.2, cy: 74.5, rx: 4.1, ry: 5.8 }
+  ]
+} as const
+
+export function Wordmark({ height }: { height: number }) {
+  const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 16, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
   return (
-    <svg width={size} height={size} viewBox="8 8 240 240" aria-hidden="true" className="logo">
-      <defs>
-        <linearGradient id="logo-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2a3346" />
-          <stop offset="1" stopColor="#141a26" />
-        </linearGradient>
-      </defs>
-      <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#logo-bg)" />
-      <circle cx="128" cy="128" r="56" fill="none" stroke="#4a86ee" strokeWidth="32" strokeDasharray="140.7 351.9" strokeDashoffset="-0.0" transform="rotate(-90 128 128)" />
-      <circle cx="128" cy="128" r="56" fill="none" stroke="#ffffff" strokeWidth="32" strokeDasharray="116.1 351.9" strokeDashoffset="-140.7" transform="rotate(-90 128 128)" />
-      <circle cx="128" cy="128" r="56" fill="none" stroke="#6f7788" strokeWidth="32" strokeDasharray="95.0 351.9" strokeDashoffset="-256.9" transform="rotate(-90 128 128)" />
+    <svg height={height} viewBox={MOO.viewBox} aria-label="Moo" role="img" className="logo">
+      <path d={MOO.m} {...stroke} />
+      <circle {...MOO.o} {...stroke} />
+      {MOO.horns.map((d) => (
+        <path key={d} d={d} {...stroke} strokeWidth={12.8} />
+      ))}
+      <circle {...MOO.head} fill="none" stroke="var(--accent)" strokeWidth={16} />
+      {MOO.nostrils.map((n) => (
+        <ellipse key={n.cx} {...n} fill="currentColor" />
+      ))}
     </svg>
   )
 }

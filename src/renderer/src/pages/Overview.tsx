@@ -80,7 +80,7 @@ export function Overview() {
   if (entries.length === 0) {
     return (
       <div className="page">
-        <PageHeader title="Übersicht" subtitle="Willkommen im Finanztracker" />
+        <PageHeader title="Übersicht" subtitle="Willkommen bei Moo" />
         <div className="card">
           <EmptyState
             icon={<Wallet size={22} />}

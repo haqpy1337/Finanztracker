@@ -135,7 +135,7 @@ export interface FinanceApi {
   loadData(): Promise<AppData | null>
   saveData(data: AppData): Promise<void>
   exportJson(data: AppData): Promise<string | null>
-  /** `name` is the start of the suggested file name, e.g. "Finanztracker-Anlagen". */
+  /** `name` is the start of the suggested file name, e.g. "Moo-Anlagen". */
   exportCsv(csv: string, name?: string): Promise<string | null>
   importJson(): Promise<AppData | null>
   /** Stores a permanent copy of the current data, e.g. before replacing it. */
