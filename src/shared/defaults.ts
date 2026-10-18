@@ -101,11 +101,6 @@ export function sampleData(today: { y: number; m: number }): AppData {
         { id: newId('x'), month: 11, amount: 3150, label: '14. Gehalt' }
       ]
     }),
-    make('Rufbereitschaft', 'cat-gehalt', 500, 'monthly', day(28), {
-      provider: 'Arbeitgeber',
-      paymentMethod: 'Überweisung',
-      variable: { rate: 500, unit: 'Woche', usual: 1, months: [] }
-    }),
     make('Kaltmiete', 'cat-wohnen', 850, 'monthly', day(1), { paymentMethod: 'Dauerauftrag', provider: 'Hausverwaltung' }),
     make('Nebenkosten-Vorauszahlung', 'cat-wohnen', 180, 'monthly', day(1), { paymentMethod: 'Dauerauftrag' }),
     make('Strom', 'cat-wohnen', 72, 'monthly', day(15), { provider: 'Stadtwerke', noticePeriod: '4 Wochen' }),

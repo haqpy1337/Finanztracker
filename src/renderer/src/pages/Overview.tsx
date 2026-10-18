@@ -120,7 +120,7 @@ export function Overview() {
           <>
             <button className="btn" onClick={() => editor.create('income')}>
               <TrendingUp size={16} />
-              Einnahme
+              Einnahme hinzufügen
             </button>
             <button className="btn primary" onClick={() => editor.create('expense')}>
               <Plus size={16} />
