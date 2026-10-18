@@ -59,3 +59,9 @@ describe('PSA certificate page', () => {
 it('ignores a heading that is only the certificate number', () => {
   expect(parsePsaPage('86915996', 'Cert #86915996', lines)?.title).toBe('2014 POKEMON JAPANESE XY PHANTOM GATE #033 GENGAR EX PHANTOM GATE-1ST ED.')
 })
+
+it('reads label/value pairs taken from the page structure, with extra text around the values', () => {
+  const r = parsePsaPage('86915996', '', ['ITEM GRADE', 'MINT 9', 'PSA ESTIMATE', 'Estimate $164.00 USD', 'PSA POPULATION', '557 View', 'Search'])
+  expect(r?.estimateUsd).toBe(164)
+  expect(r?.population).toBe(557)
+})

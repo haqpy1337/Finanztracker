@@ -148,7 +148,7 @@ function registerIpc(): void {
   })
   ipcMain.handle('update:last', () => lastUpdateStatus())
   ipcMain.handle('fx:usd', (_e, refresh?: boolean) => getUsdRate(refresh === true))
-  ipcMain.handle('psa:cert', (_e, cert: string) => lookupPsaCert(cert))
+  ipcMain.handle('psa:cert', (_e, cert: string) => lookupPsaCert(cert, mainWindow))
 }
 
 if (!app.requestSingleInstanceLock()) {
