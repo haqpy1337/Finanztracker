@@ -262,10 +262,10 @@ const INTERVALS = new Set<Interval>(['weekly', 'monthly', 'quarterly', 'halfyear
  * makes the rest of the data unreachable.
  */
 export function normalizeData(input: unknown): AppData {
-  if (!input || typeof input !== 'object') throw new Error('Die Datei enthält keine gültigen Finanztracker-Daten.')
+  if (!input || typeof input !== 'object') throw new Error('Die Datei enthält keine gültigen Moo-Daten.')
   const obj = migrate(input).data as Record<string, unknown>
   if (!Array.isArray(obj.entries) || !Array.isArray(obj.categories)) {
-    throw new Error('Die Datei enthält keine gültigen Finanztracker-Daten.')
+    throw new Error('Die Datei enthält keine gültigen Moo-Daten.')
   }
 
   const categories: Category[] = []

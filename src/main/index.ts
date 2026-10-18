@@ -39,8 +39,9 @@ function createWindow(): void {
     minWidth: 1100,
     minHeight: 700,
     show: false,
-    title: 'Finanztracker',
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#141413' : '#f6f6f4',
+    title: 'Moo',
+    // Matches the start-up screen, which is dark grey in both themes.
+    backgroundColor: '#121211',
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -90,7 +91,7 @@ function registerIpc(): void {
     const stamp = new Date().toISOString().slice(0, 10)
     const result = await dialog.showSaveDialog(mainWindow!, {
       title: 'Daten exportieren',
-      defaultPath: `Finanztracker-Export-${stamp}.json`,
+      defaultPath: `Moo-Export-${stamp}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }]
     })
     if (result.canceled || !result.filePath) return null
@@ -100,7 +101,7 @@ function registerIpc(): void {
 
   ipcMain.handle('data:export-csv', async (_e, csv: string, name?: string) => {
     const stamp = new Date().toISOString().slice(0, 10)
-    const prefix = typeof name === 'string' && /^[\w-]{1,60}$/.test(name) ? name : 'Finanztracker-Posten'
+    const prefix = typeof name === 'string' && /^[\w-]{1,60}$/.test(name) ? name : 'Moo-Posten'
     const result = await dialog.showSaveDialog(mainWindow!, {
       title: 'Als CSV exportieren',
       defaultPath: `${prefix}-${stamp}.csv`,
