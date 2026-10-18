@@ -107,7 +107,7 @@ export function AssetDialog({ initial, isNew, onClose, onSave, onDelete }: Props
         ...a,
         name: a.name.trim() ? a.name : r.cert.title,
         description: r.cert.title || a.description,
-        grading: r.cert.grading,
+        grading: r.cert.grading || a.grading,
         certificate: r.cert.cert
       }
       // An existing card gets the estimate as today's value (replacing an earlier PSA value from today).

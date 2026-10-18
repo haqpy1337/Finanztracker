@@ -36,7 +36,8 @@ Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen P
   klicken. Moo liest die öffentliche PSA-Zertifikatsseite und übernimmt Karte, Grading und die
   „PSA Estimate“ (in Dollar, mit Tageskurs in Euro umgerechnet) als Wert. Das geht beim Anlegen
   und bei „Wert aktualisieren“. PSA bietet den Wert nicht über eine Schnittstelle an; ändert PSA
-  die Seite, kann die Abfrage ausfallen, der Wert lässt sich dann weiter von Hand eintragen.
+  die Seite oder lässt Cloudflare das App-Fenster nicht durch, öffnet „Im Browser öffnen“ das
+  Zertifikat im normalen Browser; die dort angezeigte Schätzung in Dollar eintragen, Moo rechnet sie um.
 - **Kategorien** frei anpassbar, **Einstellungen** für Hell/Dunkel, Monatsbudget,
   Export/Import und Beispieldaten.
 - **Automatische Updates** beim Start über GitHub Releases.

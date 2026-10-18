@@ -1,4 +1,4 @@
-import { BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, session } from 'electron'
 import log from 'electron-log/main'
 import { cleanCertNumber, parsePsaPage, PSA_READ_SCRIPT, psaCertUrl, type PsaCert, type PsaLookup } from '@shared/psa'
 import { getUsdRate } from './fx'
@@ -12,7 +12,9 @@ import { getUsdRate } from './fx'
  * succeeds hidden. Lookups run one after another, only when the user asks.
  */
 const SHOW_AFTER_MS = 10000
-const TIMEOUT_MS = 60000
+const TIMEOUT_MS = 30000
+/** Once the window is shown (browser check), the user gets this long. */
+const VISIBLE_TIMEOUT_MS = 180000
 /** Some cards have no estimate; once the grade is there, wait this long for it before giving up on it. */
 const ESTIMATE_GRACE_MS = 6000
 
@@ -24,6 +26,18 @@ interface Page {
   lines: string[]
 }
 
+/**
+ * A plain Chrome user agent for the whole session, so the page, the Cloudflare
+ * check frame and its workers all report the same browser. A user agent set only
+ * on the window differs from the one inside the check frame, which makes the
+ * check fail over and over.
+ */
+function psaSession(): Electron.Session {
+  const s = session.fromPartition('persist:psa')
+  s.setUserAgent(app.userAgentFallback.replace(/ (Electron|Finanztracker|Moo)\/\S+/gi, ''), 'de-DE,de;q=0.9,en;q=0.8')
+  return s
+}
+
 async function readCert(cert: string, parent: BrowserWindow | null): Promise<PsaCert> {
   const win = new BrowserWindow({
     show: false,
@@ -33,7 +47,7 @@ async function readCert(cert: string, parent: BrowserWindow | null): Promise<Psa
     parent: parent ?? undefined,
     autoHideMenuBar: true,
     webPreferences: {
-      session: session.fromPartition('persist:psa'),
+      session: psaSession(),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -43,14 +57,13 @@ async function readCert(cert: string, parent: BrowserWindow | null): Promise<Psa
   win.webContents.setAudioMuted(true)
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.on('page-title-updated', (e) => e.preventDefault())
-  // A plain Chrome user agent, as the page would see from a normal browser.
-  win.webContents.setUserAgent(win.webContents.getUserAgent().replace(/ (Electron|Finanztracker|Moo)\/\S+/gi, ''))
   let last: Page | null = null
   try {
     void win.loadURL(psaCertUrl(cert)).catch(() => undefined)
     const start = Date.now()
     let gradeSince: number | null = null
-    while (Date.now() - start < TIMEOUT_MS) {
+    let shownAt: number | null = null
+    while (shownAt === null ? Date.now() - start < TIMEOUT_MS : Date.now() - shownAt < VISIBLE_TIMEOUT_MS) {
       await new Promise((r) => setTimeout(r, 500))
       if (win.isDestroyed()) throw new Error('Das PSA-Fenster wurde geschlossen, bevor die Werte gelesen waren.')
       const page = (await win.webContents.executeJavaScript(PSA_READ_SCRIPT).catch(() => null)) as Page | null
@@ -69,6 +82,7 @@ async function readCert(cert: string, parent: BrowserWindow | null): Promise<Psa
       if (!win.isVisible() && gradeSince === null && Date.now() - start > SHOW_AFTER_MS) {
         log.info(`PSA page not readable hidden yet (title: ${last?.title ?? '–'}), showing window`)
         win.show()
+        shownAt = Date.now()
       }
     }
     throw new Error('Die PSA-Seite konnte nicht gelesen werden.')

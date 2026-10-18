@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ExternalLink, Search } from 'lucide-react'
 import { usdToEur } from '@shared/fx'
-import { cleanCertNumber, type PsaCert, type PsaLookup as Lookup } from '@shared/psa'
+import { cleanCertNumber, psaCertUrl, parseUsdText, type PsaCert, type PsaLookup as Lookup } from '@shared/psa'
 import { api } from '@/lib/api'
-import { date, money, usdMoney } from '@/lib/format'
+import { date, money, parseAmount, usdMoney } from '@/lib/format'
 import { rateInput } from './UsdRate'
 
 /** What a lookup hands back to the dialog: the card data and the estimate in euros, if any. */
@@ -39,6 +39,23 @@ export function PsaLookupButton({ certificate, onResult, appliedText }: Props) {
     kind: 'idle'
   })
   const cert = cleanCertNumber(certificate)
+  const [manualText, setManualText] = useState('')
+
+  /** Fallback when PSA blocks the app: the user reads the estimate in the browser and types it in. */
+  const applyManual = async () => {
+    const t = manualText.replace(/[$\s]/g, '').replace(/^US/i, '')
+    // "1,234.50" as copied from the PSA page, otherwise German or plain input ("164,00", "164").
+    const usd = /,\d{3}(\.\d{1,2})?$|^\d+\.\d{1,2}$/.test(t) ? parseUsdText(`$${t}`) : parseAmount(t)
+    if (!cert || !usd) return
+    const rate = await api.getUsdRate().catch(() => null)
+    const lookup: Extract<Lookup, { ok: true }> = {
+      ok: true,
+      cert: { cert, url: psaCertUrl(cert), title: '', grade: '', grading: '', population: null, popHigher: null, estimateUsd: usd },
+      rate
+    }
+    setState({ kind: 'done', lookup })
+    onResult(toResult(lookup))
+  }
 
   const run = async () => {
     if (!cert) {
@@ -68,20 +85,53 @@ export function PsaLookupButton({ certificate, onResult, appliedText }: Props) {
         <span className="help">Moo liest die PSA-Seite. Erscheint ein PSA-Fenster, lädt die Seite dort fertig und das Fenster schließt sich von selbst.</span>
       )}
       {state.kind === 'error' && (
-        <span className="error">
-          {state.error} Du kannst den Wert weiter von Hand eintragen; Details stehen unter Einstellungen im Protokoll.
-        </span>
+        <div className="psa-result">
+          <span className="error">{state.error}</span>
+          {cert && (
+            <>
+              <span className="text-2">
+                Öffne das Zertifikat im Browser und trag die dort angezeigte PSA-Schätzung hier ein. Moo rechnet sie in Euro um.
+              </span>
+              <div className="psa-manual">
+                <a className="btn small" href={psaCertUrl(cert)} target="_blank" rel="noreferrer">
+                  <ExternalLink size={14} />
+                  Im Browser öffnen
+                </a>
+                <div className="amount-input">
+                  <input
+                    className="input num"
+                    value={manualText}
+                    onChange={(e) => setManualText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        void applyManual()
+                      }
+                    }}
+                    inputMode="decimal"
+                    placeholder="164,00"
+                    aria-label="PSA-Schätzung in Dollar"
+                  />
+                  <span>$</span>
+                </div>
+                <button type="button" className="btn small" onClick={() => void applyManual()} disabled={!manualText.trim()}>
+                  Übernehmen
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       )}
       {done && (
         <div className="psa-result">
-          <div>
+          {done.cert.grade && <div>
             <strong>{done.cert.grade}</strong>
             {done.cert.population !== null && <span className="text-2"> · Population {done.cert.population.toLocaleString('de-DE')}</span>}
             {' · '}
             <a href={done.cert.url} target="_blank" rel="noreferrer">
               Zertifikat ansehen <ExternalLink size={12} />
             </a>
-          </div>
+          </div>}
           {done.cert.estimateUsd === null ? (
             <div className="text-2">PSA zeigt für diese Karte keine Schätzung. Kartendaten wurden übernommen.</div>
           ) : (
@@ -100,7 +150,11 @@ export function PsaLookupButton({ certificate, onResult, appliedText }: Props) {
               )}
             </div>
           )}
-          <span className="help">{appliedText}</span>
+          {done.cert.grade ? (
+            <span className="help">{appliedText}</span>
+          ) : (
+            done.eur !== null && <span className="help">Der Euro-Wert wurde eingetragen.</span>
+          )}
         </div>
       )}
     </div>

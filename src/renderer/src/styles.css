@@ -1876,3 +1876,18 @@ tr:hover .row-actions {
   align-items: center;
   gap: 3px;
 }
+
+.psa-manual {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.psa-manual .amount-input {
+  width: 130px;
+}
+
+.psa-manual a.btn {
+  text-decoration: none;
+}
