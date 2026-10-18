@@ -16,7 +16,7 @@ export const CURRENT_SCHEMA = 4
 export class NewerSchemaError extends Error {
   constructor(readonly schema: number) {
     super(
-      `Die Daten wurden mit einer neueren Version des Finanztrackers gespeichert (Datenformat ${schema}). ` +
+      `Die Daten wurden mit einer neueren Version von Moo gespeichert (Datenformat ${schema}). ` +
         'Diese Version kann sie nicht sicher bearbeiten. Bitte installiere die neueste Version.'
     )
     this.name = 'NewerSchemaError'

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
+import { MOO } from './Logo'
 
-// The mark is drawn in about 2 s; a click or key press skips the wait.
-const MIN_VISIBLE_MS = 2300
+// The mark is drawn in about 1.9 s; a click or key press skips the wait.
+const MIN_VISIBLE_MS = 2000
 const EXIT_MS = 420
 
 const delay = (s: number) => ({ '--d': `${s}s` }) as React.CSSProperties
 
 /**
- * Start-up screen: the Moo mark draws itself on the app's grey while the data
+ * Start-up screen: the Moo wordmark draws itself on dark grey while the data
  * loads, then fades into the real app. It stays for at least a moment so the
  * animation never flickers.
  */
@@ -41,18 +42,18 @@ export function Splash({ ready, onExit }: { ready: boolean; onExit?(): void }) {
   return (
     <div className={`splash ${phase === 'exit' ? 'exit' : ''}`} aria-hidden="true">
       <div className="moo">
-        <svg viewBox="-12 -10 314 128">
-          <path className="moo-draw" pathLength={1} style={delay(0.05)} d="M8 100 V12 L48 64 L88 12 V100" />
-          <circle className="moo-draw" pathLength={1} style={delay(0.3)} cx="151" cy="66" r="34" transform="rotate(-90 151 66)" />
+        <svg viewBox={MOO.viewBox}>
+          <path className="moo-draw" pathLength={1} style={delay(0.05)} d={MOO.m} />
+          <circle className="moo-draw" pathLength={1} style={delay(0.3)} {...MOO.o} transform={`rotate(-90 ${MOO.o.cx} ${MOO.o.cy})`} />
           <g className="moo-head">
-            <path className="moo-horn" style={{ ...delay(0.85), transformOrigin: '100% 100%' }} d="M227.1 39.2 Q206 38.5 210.1 14.7" />
-            <path className="moo-horn" style={{ ...delay(0.93), transformOrigin: '0% 100%' }} d="M268.9 39.2 Q290 38.5 285.9 14.7" />
-            <circle className="moo-ring" cx="248" cy="66" r="34" />
-            <ellipse className="moo-nose" style={delay(1.05)} cx="237.8" cy="74.5" rx="4.1" ry="5.8" />
-            <ellipse className="moo-nose" style={delay(1.1)} cx="258.2" cy="74.5" rx="4.1" ry="5.8" />
+            <path className="moo-horn" style={{ ...delay(0.85), transformOrigin: '100% 100%' }} d={MOO.horns[0]} />
+            <path className="moo-horn" style={{ ...delay(0.93), transformOrigin: '0% 100%' }} d={MOO.horns[1]} />
+            <circle className="moo-ring" {...MOO.head} />
+            {MOO.nostrils.map((n, i) => (
+              <ellipse key={i} className="moo-nose" style={delay(1.05 + i * 0.05)} {...n} />
+            ))}
           </g>
         </svg>
-        <div className="moo-tag">Money Overview</div>
       </div>
     </div>
   )

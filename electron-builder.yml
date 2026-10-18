@@ -24,7 +24,10 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Finanztracker
+  shortcutName: Moo
+  # Only the visible name changes; productName and appId stay "Finanztracker" so
+  # updates and the data folder (%APPDATA%\Finanztracker) remain the same.
+  uninstallDisplayName: Moo
   deleteAppDataOnUninstall: false
   installerLanguages:
     - de_DE

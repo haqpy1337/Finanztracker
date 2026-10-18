@@ -1,6 +1,6 @@
-# Finanztracker
+# Moo · Money Overview
 
-Lokale Windows-Anwendung, um regelmäßige und einmalige Ausgaben im Blick zu behalten:
+Früher „Finanztracker“. Lokale Windows-Anwendung, um regelmäßige und einmalige Ausgaben im Blick zu behalten:
 Miete, Strom, Wasser, Abos wie Netflix oder Amazon Prime, Versicherungen, geschätzte
 Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen PC.
 
@@ -34,7 +34,9 @@ Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen P
 ## Daten und Datensicherheit
 
 Die Daten liegen als JSON-Datei unter `%APPDATA%\Finanztracker\daten\finanztracker.json`.
-Installation, Updates und Deinstallation fassen diesen Ordner nicht an.
+Installation, Updates und Deinstallation fassen diesen Ordner nicht an. Der Ordner heißt
+weiter `Finanztracker`, weil intern (App-ID, Produktname, Update-Pfad) der alte Name
+bleibt; nur der angezeigte Name ist „Moo“.
 
 So bleiben die Daten auch über Updates hinweg unversehrt:
 

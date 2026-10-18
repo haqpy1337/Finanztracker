@@ -115,22 +115,15 @@ h3 {
 
 .brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 10px 22px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 4px 10px 22px;
 }
 
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-}
-
-.brand-name {
-  font-weight: 650;
-  font-size: 15px;
-  letter-spacing: -0.01em;
+.brand .logo {
+  display: block;
+  color: var(--text);
 }
 
 .brand-sub {
@@ -1459,26 +1452,21 @@ tr:hover .row-actions {
   animation: rise-in 0.25s var(--ease-out) both;
 }
 
-/* Start-up screen: the Moo mark draws itself on the app's grey, then fades into the app */
+/* Start-up screen: the Moo wordmark draws itself on dark grey in both themes, then fades into the app */
 .splash {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 46%, var(--splash-glow) 0, var(--bg) 62%);
+  background: radial-gradient(circle at 50% 46%, #1f1f1e 0, #121211 62%);
   transition:
     opacity 0.42s var(--ease-in-out),
     visibility 0.42s;
 }
 
 :root {
-  --splash-glow: #fbfbfa;
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-:root[data-theme='dark'] {
-  --splash-glow: #1f1f1e;
 }
 
 .splash.exit {
@@ -1487,9 +1475,6 @@ tr:hover .row-actions {
 }
 
 .moo {
-  display: grid;
-  justify-items: center;
-  gap: 18px;
   transition: transform 0.42s var(--ease-in-out);
 }
 
@@ -1501,7 +1486,7 @@ tr:hover .row-actions {
   width: min(300px, 46vw);
   height: auto;
   overflow: visible;
-  color: var(--text);
+  color: #f0efec;
 }
 
 .moo-draw {
@@ -1524,7 +1509,7 @@ tr:hover .row-actions {
 
 .moo-ring {
   fill: none;
-  stroke: var(--accent);
+  stroke: #4a86ee;
   stroke-width: 16;
 }
 
@@ -1542,16 +1527,6 @@ tr:hover .row-actions {
   transform-box: fill-box;
   transform-origin: center;
   animation: moo-blink 0.3s var(--d) var(--ease-out) both;
-}
-
-.moo-tag {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--muted);
-  animation: moo-tag 0.7s 1.15s var(--ease-out) both;
-  letter-spacing: 0.32em;
-  padding-left: 0.32em;
 }
 
 @keyframes moo-draw {
@@ -1590,14 +1565,6 @@ tr:hover .row-actions {
   from {
     opacity: 0;
     transform: scale(0);
-  }
-}
-
-@keyframes moo-tag {
-  from {
-    opacity: 0;
-    letter-spacing: 0.6em;
-    transform: translateY(6px);
   }
 }
 

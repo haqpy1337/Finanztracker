@@ -98,7 +98,7 @@ export function Assets() {
             onUpdate={(a) => setValuing({ asset: a })}
             onDelete={setDeleting}
             onExport={async () => {
-              const path = await api.exportCsv(assetsToCsv(data.assets, today), 'Finanztracker-Anlagen')
+              const path = await api.exportCsv(assetsToCsv(data.assets, today), 'Moo-Anlagen')
               if (path) toast({ message: 'CSV-Datei gespeichert' })
             }}
           />
