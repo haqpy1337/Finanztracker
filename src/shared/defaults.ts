@@ -1,4 +1,4 @@
-import type { AppData, Category, Entry, EntryKind, ExtraPayment, Interval, Settings } from './types'
+import type { AppData, Category, Entry, EntryKind, ExtraPayment, Interval, Settings, VariablePay } from './types'
 import { CURRENT_SCHEMA, migrate } from './schema'
 import { addMonths, isValidIso, toIso } from './calc'
 
@@ -67,6 +67,7 @@ export function blankEntry(kind: EntryKind, categoryId: string, startDate: strin
     contractEnd: null,
     notes: '',
     extraPayments: [],
+    variable: null,
     createdAt: now,
     updatedAt: now
   }
@@ -99,6 +100,11 @@ export function sampleData(today: { y: number; m: number }): AppData {
         { id: newId('x'), month: 5, amount: 3150, label: '13. Gehalt' },
         { id: newId('x'), month: 11, amount: 3150, label: '14. Gehalt' }
       ]
+    }),
+    make('Rufbereitschaft', 'cat-gehalt', 500, 'monthly', day(28), {
+      provider: 'Arbeitgeber',
+      paymentMethod: 'Überweisung',
+      variable: { rate: 500, unit: 'Woche', usual: 1, months: [] }
     }),
     make('Kaltmiete', 'cat-wohnen', 850, 'monthly', day(1), { paymentMethod: 'Dauerauftrag', provider: 'Hausverwaltung' }),
     make('Nebenkosten-Vorauszahlung', 'cat-wohnen', 180, 'monthly', day(1), { paymentMethod: 'Dauerauftrag' }),
@@ -141,6 +147,7 @@ const ENTRY_FIELDS = new Set([
   'contractEnd',
   'notes',
   'extraPayments',
+  'variable',
   'createdAt',
   'updatedAt'
 ])
@@ -157,6 +164,33 @@ function normalizeExtras(value: unknown): ExtraPayment[] {
     out.push({ id: str(r.id) || newId('x'), month, amount, label: str(r.label) })
   }
   return out.sort((a, b) => a.month - b.month)
+}
+
+const MAX_UNITS = 1000
+
+export function normalizeVariable(value: unknown): VariablePay | null {
+  if (!value || typeof value !== 'object') return null
+  const r = value as Record<string, unknown>
+  const rate = typeof r.rate === 'number' && Number.isFinite(r.rate) ? Math.round(Math.abs(r.rate) * 100) / 100 : 0
+  if (rate <= 0) return null
+  const count = (v: unknown, fallback: number) =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(MAX_UNITS, Math.round(v * 100) / 100) : fallback
+  const months = new Map<string, number>()
+  if (Array.isArray(r.months)) {
+    for (const m of r.months) {
+      if (!m || typeof m !== 'object') continue
+      const o = m as Record<string, unknown>
+      if (typeof o.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(o.month)) continue
+      if (typeof o.count !== 'number' || !Number.isFinite(o.count) || o.count < 0) continue
+      months.set(o.month, count(o.count, 0))
+    }
+  }
+  return {
+    rate,
+    unit: str(r.unit).trim() || 'Woche',
+    usual: count(r.usual, 1),
+    months: [...months].map(([month, c]) => ({ month, count: c })).sort((a, b) => (a.month < b.month ? -1 : 1))
+  }
 }
 
 function str(v: unknown, fallback = ''): string {
@@ -211,14 +245,15 @@ export function normalizeData(input: unknown): AppData {
     const now = new Date().toISOString()
     // Fields this version does not know are kept as they are.
     const unknownFields = Object.fromEntries(Object.entries(r).filter(([k]) => !ENTRY_FIELDS.has(k)))
+    const variable = normalizeVariable(r.variable)
     entries.push({
       ...unknownFields,
       id: str(r.id) || newId(),
       kind,
       name: str(r.name, 'Ohne Namen') || 'Ohne Namen',
       categoryId,
-      amount: Math.round(amount * 100) / 100,
-      interval: INTERVALS.has(r.interval as Interval) ? (r.interval as Interval) : 'monthly',
+      amount: variable ? Math.round(variable.rate * variable.usual * 100) / 100 : Math.round(amount * 100) / 100,
+      interval: variable ? 'monthly' : INTERVALS.has(r.interval as Interval) ? (r.interval as Interval) : 'monthly',
       startDate,
       endDate: isValidIso(str(r.endDate)) && str(r.endDate) >= startDate ? str(r.endDate) : null,
       estimated: r.estimated === true,
@@ -228,7 +263,8 @@ export function normalizeData(input: unknown): AppData {
       noticePeriod: str(r.noticePeriod),
       contractEnd: isValidIso(str(r.contractEnd)) ? str(r.contractEnd) : null,
       notes: str(r.notes),
-      extraPayments: normalizeExtras(r.extraPayments),
+      extraPayments: variable ? [] : normalizeExtras(r.extraPayments),
+      variable,
       createdAt: str(r.createdAt, now) || now,
       updatedAt: str(r.updatedAt, now) || now
     })

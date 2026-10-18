@@ -209,6 +209,14 @@ export function Entries() {
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <span className={`badge ${STATUS_BADGE[st]}`}>{STATUS_LABELS[st]}</span>
                         {e.estimated && <span className="badge warn">geschätzt</span>}
+                        {e.variable && (
+                          <span
+                            className="badge accent"
+                            title={`${money(e.variable.rate)} pro ${e.variable.unit}, üblich ${String(e.variable.usual).replace('.', ',')} pro Monat${e.variable.months.length ? `, ${e.variable.months.length} abweichende Monate` : ''}`}
+                          >
+                            variabel
+                          </span>
+                        )}
                         {e.interval !== 'once' && e.extraPayments.length > 0 && (
                           <span className="badge accent" title={e.extraPayments.map((x) => `${x.label || 'Sonderzahlung'}: ${money(x.amount)} im ${MONTHS[x.month - 1]}`).join('\n')}>
                             {e.extraPayments.length === 1 ? '+1 Sonderzahlung' : `+${e.extraPayments.length} Sonderzahlungen`}

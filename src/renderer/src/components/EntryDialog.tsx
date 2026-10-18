@@ -1,11 +1,27 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2, X } from 'lucide-react'
-import type { Entry, EntryKind, ExtraPayment, Interval } from '@shared/types'
+import type { Entry, EntryKind, ExtraPayment, Interval, VariablePay } from '@shared/types'
 import { isValidIso, monthlyEquivalent, nextOccurrence, todayIso, yearlyEquivalent } from '@shared/calc'
 import { INTERVAL_LABELS, INTERVAL_ORDER, newId, PAYMENT_METHODS } from '@shared/defaults'
 import { useStore } from '@/lib/store'
 import { amountInput, date, money, MONTHS, parseAmount } from '@/lib/format'
 import { Dialog, Segmented } from './ui'
+
+interface MonthDraft {
+  id: string
+  month: string
+  countText: string
+}
+
+const UNITS = ['Woche', 'Tag', 'Stunde', 'Einsatz']
+
+/** Parses a unit count such as "2" or "1,5"; zero is allowed. */
+function parseCount(text: string): number | null {
+  const t = text.trim().replace(',', '.')
+  if (!/^\d+(\.\d+)?$/.test(t)) return null
+  const n = Number(t)
+  return n <= 1000 ? n : null
+}
 
 interface ExtraDraft {
   id: string
@@ -20,7 +36,7 @@ function startLabel(income: boolean, recurring: boolean): string {
 }
 
 /** Common positions; picking one fills in a sensible category and interval. */
-const SUGGESTIONS: Array<{ name: string; category: string; interval?: Interval }> = [
+const SUGGESTIONS: Array<{ name: string; category: string; interval?: Interval; variable?: boolean }> = [
   { name: 'Miete', category: 'cat-wohnen' },
   { name: 'Nebenkosten', category: 'cat-wohnen' },
   { name: 'Strom', category: 'cat-wohnen' },
@@ -50,7 +66,8 @@ const SUGGESTIONS: Array<{ name: string; category: string; interval?: Interval }
   { name: 'Handyvertrag', category: 'cat-kommunikation' },
   { name: 'Fitnessstudio', category: 'cat-freizeit' },
   { name: 'Sparplan', category: 'cat-sparen' },
-  { name: 'Gehalt', category: 'cat-gehalt' }
+  { name: 'Gehalt', category: 'cat-gehalt' },
+  { name: 'Rufbereitschaft', category: 'cat-gehalt', variable: true }
 ]
 
 interface Props {
@@ -70,10 +87,29 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
     (initial.extraPayments ?? []).map((x) => ({ id: x.id, month: x.month, label: x.label, amountText: amountInput(x.amount) }))
   )
 
+  const [varMode, setVarMode] = useState(!!initial.variable)
+  const [rateText, setRateText] = useState(initial.variable ? amountInput(initial.variable.rate) : '')
+  const [unit, setUnit] = useState(initial.variable?.unit ?? 'Woche')
+  const [usualText, setUsualText] = useState(String(initial.variable?.usual ?? 1).replace('.', ','))
+  const [months, setMonths] = useState<MonthDraft[]>(() =>
+    (initial.variable?.months ?? []).map((m) => ({ id: newId('v'), month: m.month, countText: String(m.count).replace('.', ',') }))
+  )
+
   const categories = data.categories.filter((c) => c.kind === entry.kind)
-  const amount = parseAmount(amountText)
   const income = entry.kind === 'income'
-  const recurring = entry.interval !== 'once'
+  const variableOn = varMode && income
+  const rate = parseAmount(rateText)
+  const usual = parseCount(usualText)
+  const parsedMonths = months.map((m) => ({ ...m, count: parseCount(m.countText) }))
+  const monthsInvalid = parsedMonths.some(
+    (m, i) => !/^\d{4}-(0[1-9]|1[0-2])$/.test(m.month) || m.count === null || parsedMonths.findIndex((o) => o.month === m.month) !== i
+  )
+  const variable: VariablePay | null =
+    variableOn && rate !== null && rate > 0 && usual !== null
+      ? { rate, unit, usual, months: parsedMonths.filter((m) => m.count !== null).map((m) => ({ month: m.month, count: m.count! })) }
+      : null
+  const amount = variableOn ? (variable ? Math.round(variable.rate * variable.usual * 100) / 100 : null) : parseAmount(amountText)
+  const recurring = variableOn || entry.interval !== 'once'
   const parsedExtras: ExtraPayment[] = recurring
     ? extras.map((x) => ({ id: x.id, month: x.month, label: x.label.trim(), amount: parseAmount(x.amountText) ?? 0 }))
     : []
@@ -81,7 +117,10 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
 
   const errors = {
     name: !entry.name.trim() ? 'Bitte eine Bezeichnung eingeben.' : null,
-    amount: amount === null || amount <= 0 ? 'Bitte einen Betrag größer als 0 eingeben.' : null,
+    amount: variableOn ? null : amount === null || amount <= 0 ? 'Bitte einen Betrag größer als 0 eingeben.' : null,
+    rate: variableOn && (rate === null || rate <= 0) ? 'Bitte einen Betrag größer als 0 eingeben.' : null,
+    usual: variableOn && usual === null ? 'Bitte eine Zahl eingeben.' : null,
+    months: variableOn && monthsInvalid ? 'Bitte für jeden abweichenden Monat einen Monat und eine Anzahl eingeben (jeder Monat nur einmal).' : null,
     startDate: !isValidIso(entry.startDate) ? 'Bitte ein gültiges Datum wählen.' : null,
     endDate: entry.endDate && entry.endDate < entry.startDate ? 'Das Enddatum liegt vor dem Startdatum.' : null,
     extras: extrasInvalid ? 'Bitte für jede Sonderzahlung einen Betrag größer als 0 eingeben.' : null
@@ -104,16 +143,24 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
       ...(cat ? { categoryId: cat.id, kind: cat.kind } : {}),
       ...(match?.interval ? { interval: match.interval } : {})
     }))
+    if (match?.variable && cat?.kind === 'income') setVarMode(true)
   }
 
   const preview = useMemo(() => {
-    const probe = { ...entry, amount: amount ?? 0, paused: false, extraPayments: parsedExtras.filter((x) => x.amount > 0) }
+    const probe = {
+      ...entry,
+      amount: amount ?? 0,
+      interval: variableOn ? ('monthly' as Interval) : entry.interval,
+      paused: false,
+      variable,
+      extraPayments: variableOn ? [] : parsedExtras.filter((x) => x.amount > 0)
+    }
     return {
       monthly: monthlyEquivalent(probe),
       yearly: yearlyEquivalent(probe),
       next: isValidIso(probe.startDate) ? nextOccurrence(probe, todayIso()) : null
     }
-  }, [entry, amount, extras])
+  }, [entry, amount, extras, variable, variableOn])
 
   const addExtra = (label: string, month: number) =>
     setExtras((list) => [...list, { id: newId('x'), month, label, amountText: amount ? amountInput(amount) : '' }])
@@ -126,7 +173,16 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
       setShowErrors(true)
       return
     }
-    const saved = { ...entry, name: entry.name.trim(), amount, extraPayments: [...parsedExtras].sort((a, b) => a.month - b.month) }
+    const saved: Entry = variableOn
+      ? {
+          ...entry,
+          name: entry.name.trim(),
+          amount,
+          interval: 'monthly',
+          extraPayments: [],
+          variable: variable && { ...variable, months: [...variable.months].sort((a, b) => (a.month < b.month ? -1 : 1)) }
+        }
+      : { ...entry, name: entry.name.trim(), amount, variable: null, extraPayments: [...parsedExtras].sort((a, b) => a.month - b.month) }
     upsertEntry(saved)
     onSaved?.(saved)
     onClose()
@@ -203,33 +259,90 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           </select>
         </div>
 
-        <div className="field s2">
-          <label htmlFor="f-amount">Betrag</label>
-          <div className="amount-input">
-            <input
-              id="f-amount"
-              className={`input num ${showErrors && errors.amount ? 'invalid' : ''}`}
-              value={amountText}
-              onChange={(e) => setAmountText(e.target.value)}
-              onBlur={() => amount !== null && setAmountText(amountInput(amount))}
-              inputMode="decimal"
-              placeholder="0,00"
-            />
-            <span>€</span>
+        {income && (
+          <div className="field s6">
+            <label className="check" style={{ fontWeight: 400, color: 'var(--text)', fontSize: 14 }}>
+              <input type="checkbox" checked={varMode} onChange={(e) => setVarMode(e.target.checked)} />
+              Schwankender Betrag (z. B. Rufbereitschaft: Betrag pro Woche × Anzahl)
+            </label>
           </div>
-          {err('amount')}
-        </div>
+        )}
 
-        <div className="field s2">
-          <label htmlFor="f-interval">Intervall</label>
-          <select id="f-interval" className="select" value={entry.interval} onChange={(e) => set('interval', e.target.value as Interval)}>
-            {INTERVAL_ORDER.map((i) => (
-              <option key={i} value={i}>
-                {INTERVAL_LABELS[i]}
-              </option>
-            ))}
-          </select>
-        </div>
+        {variableOn ? (
+          <>
+            <div className="field s2">
+              <label htmlFor="f-rate">Betrag pro Einheit</label>
+              <div className="amount-input">
+                <input
+                  id="f-rate"
+                  className={`input num ${showErrors && errors.rate ? 'invalid' : ''}`}
+                  value={rateText}
+                  onChange={(e) => setRateText(e.target.value)}
+                  onBlur={() => rate !== null && setRateText(amountInput(rate))}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                />
+                <span>€</span>
+              </div>
+              {err('rate')}
+            </div>
+            <div className="field s2">
+              <label htmlFor="f-unit">Einheit</label>
+              <select id="f-unit" className="select" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                {(UNITS.includes(unit) ? UNITS : [...UNITS, unit]).map((u) => (
+                  <option key={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field s2">
+              <label htmlFor="f-usual">Üblich pro Monat</label>
+              <input
+                id="f-usual"
+                className={`input num ${showErrors && errors.usual ? 'invalid' : ''}`}
+                value={usualText}
+                onChange={(e) => setUsualText(e.target.value)}
+                inputMode="decimal"
+                placeholder="1"
+              />
+              {err('usual')}
+            </div>
+            <div className="field s6">
+              <span className="help" style={{ marginTop: -6 }}>
+                Wird jeden Monat am selben Tag gebucht. Weicht ein Monat ab, trage ihn unten ein.
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="field s2">
+              <label htmlFor="f-amount">Betrag</label>
+              <div className="amount-input">
+                <input
+                  id="f-amount"
+                  className={`input num ${showErrors && errors.amount ? 'invalid' : ''}`}
+                  value={amountText}
+                  onChange={(e) => setAmountText(e.target.value)}
+                  onBlur={() => amount !== null && setAmountText(amountInput(amount))}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                />
+                <span>€</span>
+              </div>
+              {err('amount')}
+            </div>
+
+            <div className="field s2">
+              <label htmlFor="f-interval">Intervall</label>
+              <select id="f-interval" className="select" value={entry.interval} onChange={(e) => set('interval', e.target.value as Interval)}>
+                {INTERVAL_ORDER.map((i) => (
+                  <option key={i} value={i}>
+                    {INTERVAL_LABELS[i]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
 
         <div className="field s2">
           <label htmlFor="f-start">{startLabel(income, recurring)}</label>
@@ -243,7 +356,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           {err('startDate')}
         </div>
 
-        {entry.interval !== 'once' && (
+        {recurring && (
           <div className="field s2">
             <label htmlFor="f-end">Läuft bis (optional)</label>
             <input
@@ -304,7 +417,58 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           </>
         )}
 
-        {recurring && (
+        {variableOn && (
+          <>
+            <div className="section-label">Abweichende Monate</div>
+            <div className="field s6">
+              <span className="help" style={{ marginTop: -6 }}>
+                Nur nötig, wenn in einem Monat mehr oder weniger als üblich anfällt, z. B. 2 Wochen im November oder 0 im Urlaub.
+              </span>
+              {months.length > 0 && (
+                <div className="extras">
+                  {months.map((m) => (
+                    <div className="extra-row" key={m.id}>
+                      <input
+                        type="month"
+                        className="input"
+                        value={m.month}
+                        aria-label="Monat"
+                        onChange={(e) => setMonths((l) => l.map((x) => (x.id === m.id ? { ...x, month: e.target.value } : x)))}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          className={`input num ${showErrors && parseCount(m.countText) === null ? 'invalid' : ''}`}
+                          style={{ width: 70, textAlign: 'right' }}
+                          value={m.countText}
+                          inputMode="decimal"
+                          aria-label={`Anzahl ${unit}`}
+                          onChange={(e) => setMonths((l) => l.map((x) => (x.id === m.id ? { ...x, countText: e.target.value } : x)))}
+                        />
+                        <span className="text-2">{unit}</span>
+                      </div>
+                      <button type="button" className="icon-btn danger" title="Entfernen" onClick={() => setMonths((l) => l.filter((x) => x.id !== m.id))}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {err('months')}
+              <div>
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() => setMonths((l) => [...l, { id: newId('v'), month: todayIso().slice(0, 7), countText: String(usual ?? 1).replace('.', ',') }])}
+                >
+                  <Plus size={14} />
+                  Abweichenden Monat hinzufügen
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {recurring && !variableOn && (
           <>
             <div className="section-label">Sonderzahlungen</div>
             <div className="field s6">
@@ -386,10 +550,18 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           <textarea id="f-notes" className="textarea" value={entry.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Kundennummer, Vertragsdetails …" />
         </div>
 
-        {entry.interval !== 'once' ? (
+        {recurring ? (
           <div className="preview-box">
+            {variableOn && variable && (
+              <span>
+                Üblich{' '}
+                <strong className="num" style={{ whiteSpace: 'nowrap' }}>
+                  {money(variable.rate)} × {String(variable.usual).replace('.', ',')} {variable.unit}
+                </strong>
+              </span>
+            )}
             <span>
-              {parsedExtras.length > 0 ? 'Ø pro Monat' : 'Pro Monat'} <strong className="num">{money(preview.monthly)}</strong>
+              {parsedExtras.length > 0 || variableOn ? 'Ø pro Monat' : 'Pro Monat'} <strong className="num">{money(preview.monthly)}</strong>
             </span>
             <span>
               Pro Jahr{parsedExtras.length > 0 ? ' inkl. Sonderzahlungen' : ''} <strong className="num">{money(preview.yearly)}</strong>

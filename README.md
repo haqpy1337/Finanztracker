@@ -19,6 +19,8 @@ Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen P
   optional mit Enddatum, Kündigungsfrist und Vertragsende.
 - Sonderzahlungen wie 13. und 14. Monatsgehalt in festen Monaten, die in Monats- und
   Jahresübersicht erscheinen und in den Monatsdurchschnitt einfließen.
+- Schwankende Einnahmen wie Rufbereitschaft: Betrag pro Einheit (z. B. 500 € pro Woche) mal übliche
+  Anzahl pro Monat, einzelne Monate lassen sich abweichend eintragen (z. B. 2 Wochen im November).
 - **Kategorien** frei anpassbar, **Einstellungen** für Hell/Dunkel, Monatsbudget,
   Export/Import und Beispieldaten.
 - **Automatische Updates** beim Start über GitHub Releases.

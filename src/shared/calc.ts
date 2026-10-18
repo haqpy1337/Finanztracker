@@ -95,7 +95,16 @@ export function monthEnd(y: number, m: number): string {
 
 /** True when the entry is counted at all (paused entries are left out of every calculation). */
 export function isCounted(entry: Entry): boolean {
-  return !entry.paused && entry.amount > 0
+  return !entry.paused && (entry.amount > 0 || (entry.variable?.rate ?? 0) > 0)
+}
+
+/** Amount due on `date`: for variable income rate x units of that month, otherwise the fixed amount. */
+export function occurrenceAmount(entry: Entry, date: string): number {
+  const v = entry.variable
+  if (!v) return entry.amount
+  const month = date.slice(0, 7)
+  const count = v.months.find((m) => m.month === month)?.count ?? v.usual
+  return Math.round(v.rate * count * 100) / 100
 }
 
 /** True when a recurring entry runs on the given date. */
@@ -187,7 +196,8 @@ export function occurrencesInRange(entries: Entry[], from: string, to: string, k
   for (const entry of entries) {
     if (kind && entry.kind !== kind) continue
     for (const date of occurrencesBetween(entry, from, to)) {
-      out.push({ entry, date, amount: entry.amount })
+      const amount = occurrenceAmount(entry, date)
+      if (amount > 0) out.push({ entry, date, amount })
     }
     for (const x of extraOccurrencesBetween(entry, from, to)) {
       out.push({ entry, date: x.date, amount: x.amount, extraLabel: x.label })

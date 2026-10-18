@@ -199,6 +199,11 @@ export function MonthView() {
                               {o.extraLabel}
                             </span>
                           )}
+                          {o.entry.variable && !o.extraLabel && (
+                            <span className="badge accent" style={{ marginLeft: 8 }}>
+                              variabel
+                            </span>
+                          )}
                           {o.entry.estimated && (
                             <span className="badge warn" style={{ marginLeft: 8 }}>
                               geschätzt
@@ -206,7 +211,13 @@ export function MonthView() {
                           )}
                         </div>
                         <div className="entry-meta">
-                          {[INTERVAL_LABELS[o.entry.interval], o.entry.provider, o.entry.paymentMethod].filter(Boolean).join(' · ')}
+                          {[
+                            o.entry.variable && !o.extraLabel
+                              ? `${money(o.entry.variable.rate)} × ${String(o.amount / o.entry.variable.rate).replace('.', ',')} ${o.entry.variable.unit}`
+                              : INTERVAL_LABELS[o.entry.interval],
+                            o.entry.provider,
+                            o.entry.paymentMethod
+                          ].filter(Boolean).join(' · ')}
                         </div>
                       </td>
                       <td>

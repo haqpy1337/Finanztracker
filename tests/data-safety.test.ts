@@ -13,7 +13,7 @@ describe('upgrading data from 0.1.0', () => {
   it('keeps every entry with all its values unchanged', () => {
     expect(upgraded.entries).toHaveLength(v010.entries.length)
     v010.entries.forEach((original: Record<string, unknown>, i: number) => {
-      expect(upgraded.entries[i]).toEqual({ ...original, extraPayments: [] })
+      expect(upgraded.entries[i]).toEqual({ ...original, extraPayments: [], variable: null })
     })
   })
 
@@ -59,5 +59,20 @@ describe('protection against data loss', () => {
       ]
     })
     expect(data.entries[0].extraPayments.map((x) => x.label)).toEqual(['13. Gehalt', '14. Gehalt'])
+  })
+})
+
+describe('upgrading data from format 2', () => {
+  it('only adds `variable: null` to entries and keeps everything else', () => {
+    const v2 = { ...JSON.parse(JSON.stringify(v010)), schemaVersion: 2 }
+    v2.entries = v2.entries.map((e: Record<string, unknown>) => ({ ...e, extraPayments: [{ id: 'x', month: 5, amount: 1, label: 'a' }] }))
+    expect(migrate(v2).from).toBe(2)
+    const up = normalizeData(v2)
+    up.entries.forEach((e, i) => expect(e).toEqual({ ...v2.entries[i], variable: null }))
+    expect(up.categories).toEqual(v2.categories)
+  })
+
+  it('still refuses newer data', () => {
+    expect(() => normalizeData({ ...v010, schemaVersion: CURRENT_SCHEMA + 1 })).toThrow(NewerSchemaError)
   })
 })

@@ -1298,6 +1298,9 @@ tr:hover .row-actions {
 .extra-row {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 140px 30px;
+}
+.extra-row:has(input[type='month']) {
+  grid-template-columns: 200px minmax(0, 1fr) 30px;
   gap: 8px;
   align-items: center;
 }

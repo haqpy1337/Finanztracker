@@ -45,8 +45,21 @@ export interface Entry {
   notes: string
   /** Paid once a year in the given months on top of the regular amount. */
   extraPayments: ExtraPayment[]
+  /** Income that varies per month (e.g. on-call duty): rate x number of units. null for fixed amounts. */
+  variable: VariablePay | null
   createdAt: string
   updatedAt: string
+}
+
+export interface VariablePay {
+  /** Amount per unit, e.g. 500 per week of on-call duty. */
+  rate: number
+  /** Name of the unit, e.g. "Woche". */
+  unit: string
+  /** Usual number of units per month. */
+  usual: number
+  /** Months that differ from the usual count (YYYY-MM). */
+  months: Array<{ month: string; count: number }>
 }
 
 export interface Settings {
@@ -56,7 +69,7 @@ export interface Settings {
 }
 
 export interface AppData {
-  schemaVersion: 2
+  schemaVersion: 3
   categories: Category[]
   entries: Entry[]
   settings: Settings

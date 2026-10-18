@@ -139,3 +139,37 @@ describe('extra payments (13th/14th salary)', () => {
     expect(occurrencesInMonth([late], 2027, 5)).toHaveLength(0)
   })
 })
+
+describe('variable income (on-call duty)', () => {
+  const rb = entry({
+    kind: 'income',
+    categoryId: 'cat-gehalt',
+    name: 'Rufbereitschaft',
+    amount: 500,
+    startDate: '2026-01-28',
+    variable: { rate: 500, unit: 'Woche', usual: 1, months: [{ month: '2026-11', count: 2 }, { month: '2026-03', count: 0 }] }
+  })
+
+  it('uses the usual count, overrides and skips months with zero units', () => {
+    expect(occurrencesInMonth([rb], 2026, 2).map((o) => o.amount)).toEqual([500])
+    expect(occurrencesInMonth([rb], 2026, 11).map((o) => o.amount)).toEqual([1000])
+    expect(occurrencesInMonth([rb], 2026, 3)).toEqual([])
+    expect(sum(monthTotals([rb], 2026, 'income'))).toBe(500 * 10 + 1000)
+  })
+
+  it('is counted even when the usual count is zero, and stays out when paused', () => {
+    const none = { ...rb, amount: 0, variable: { ...rb.variable!, usual: 0, months: [{ month: '2026-05', count: 4 }] } }
+    expect(occurrencesInMonth([none], 2026, 5).map((o) => o.amount)).toEqual([2000])
+    expect(occurrencesInMonth([none], 2026, 6)).toEqual([])
+    expect(occurrencesInMonth([{ ...rb, paused: true }], 2026, 2)).toEqual([])
+  })
+
+  it('normalizes consistently and is stable when saved again', () => {
+    const messy = { ...rb, interval: 'yearly', amount: 1, extraPayments: [{ id: 'x', month: 5, amount: 9, label: '' }],
+      variable: { rate: 500, unit: ' ', usual: 2, months: [{ month: '2026-13', count: 1 }, { month: '2026-04', count: -1 }, { month: '2026-06', count: 3 }, { month: '2026-06', count: 4 }] } }
+    const data = normalizeData({ ...sampleData({ y: 2026, m: 1 }), entries: [messy] })
+    const e = data.entries[0]
+    expect([e.interval, e.amount, e.extraPayments, e.variable]).toEqual(['monthly', 1000, [], { rate: 500, unit: 'Woche', usual: 2, months: [{ month: '2026-06', count: 4 }] }])
+    expect(normalizeData(JSON.parse(JSON.stringify(data)))).toEqual(data)
+  })
+})

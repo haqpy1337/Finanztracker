@@ -217,6 +217,7 @@ export function Overview() {
                       <div className="title">
                         {o.entry.name}
                         {o.extraLabel && <span className="text-2"> · {o.extraLabel}</span>}
+                        {o.entry.variable && !o.extraLabel && <span className="text-2"> · variabel</span>}
                       </div>
                       <div className="entry-meta">
                         {dayAndWeekday(o.date)} · {categoryById(o.entry.categoryId)?.name ?? 'Ohne Kategorie'}
@@ -261,7 +262,7 @@ export function Overview() {
                           <CategoryLabel category={cat} />
                         </span>
                         <span className="entry-meta">
-                          {INTERVAL_LABELS[e.interval]} {money(e.amount)}
+                          {e.variable ? `variabel, Ø ${money(e.amount)}` : `${INTERVAL_LABELS[e.interval]} ${money(e.amount)}`}
                         </span>
                       </div>
                       <div className="share-bar">

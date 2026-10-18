@@ -46,6 +46,7 @@ export function entriesToCsv(data: AppData, today: string): string {
     'Intervall',
     'Ø pro Monat',
     'Sonderzahlungen',
+    'Variabel',
     'Erste Fälligkeit',
     'Läuft bis',
     'Nächste Fälligkeit',
@@ -65,6 +66,9 @@ export function entriesToCsv(data: AppData, today: string): string {
     INTERVAL_LABELS[e.interval],
     monthlyEquivalent(e),
     e.extraPayments.map((x) => `${x.label || 'Sonderzahlung'} ${MONTHS[x.month - 1]} ${x.amount.toFixed(2).replace('.', ',')}`).join(', '),
+    e.variable
+      ? `${e.variable.rate.toFixed(2).replace('.', ',')} pro ${e.variable.unit}, üblich ${String(e.variable.usual).replace('.', ',')}`
+      : '',
     e.startDate,
     e.endDate ?? '',
     nextOccurrence(e, today) ?? '',

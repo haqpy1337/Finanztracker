@@ -7,8 +7,9 @@
  * History:
  *   1  0.1.0  initial format
  *   2  0.2.0  entries gain `extraPayments` (13th/14th salary and similar)
+ *   3  0.3.0  entries gain `variable` (income that varies per month, e.g. on-call duty)
  */
-export const CURRENT_SCHEMA = 2
+export const CURRENT_SCHEMA = 3
 
 /** Thrown when the data was written by a newer app version than this one. */
 export class NewerSchemaError extends Error {
@@ -30,6 +31,13 @@ const STEPS: Record<number, Step> = {
     ...data,
     entries: Array.isArray(data.entries)
       ? data.entries.map((e) => (e && typeof e === 'object' ? { extraPayments: [], ...(e as Raw) } : e))
+      : data.entries
+  }),
+  // 2 -> 3: entries get `variable: null`, i.e. nothing changes for existing entries.
+  2: (data) => ({
+    ...data,
+    entries: Array.isArray(data.entries)
+      ? data.entries.map((e) => (e && typeof e === 'object' ? { variable: null, ...(e as Raw) } : e))
       : data.entries
   })
 }
