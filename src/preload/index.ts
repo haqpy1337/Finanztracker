@@ -20,6 +20,7 @@ const api: FinanceApi = {
     void ipcRenderer.invoke('update:last').then(listener)
     return () => ipcRenderer.removeListener('update:status', handler)
   },
+  getUsdRate: (refresh?: boolean) => ipcRenderer.invoke('fx:usd', refresh),
   onFlushRequest: (flush: () => Promise<void>) => {
     const handler = (): void => {
       void flush()

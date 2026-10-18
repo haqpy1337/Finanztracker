@@ -1,3 +1,5 @@
+import type { UsdQuote } from './fx'
+
 export type EntryKind = 'expense' | 'income'
 
 export type Interval = 'weekly' | 'monthly' | 'quarterly' | 'halfyearly' | 'yearly' | 'once'
@@ -47,8 +49,25 @@ export interface Entry {
   extraPayments: ExtraPayment[]
   /** Income that varies per month (e.g. on-call duty): rate x number of units. null for fixed amounts. */
   variable: VariablePay | null
+  /** Set when the amount was entered in US dollars; `amount` then holds the converted euro value. */
+  foreign: ForeignAmount | null
   createdAt: string
   updatedAt: string
+}
+
+/** The amount as originally entered in a foreign currency, kept so the conversion stays traceable. */
+export interface ForeignAmount {
+  currency: 'USD'
+  /** Amount in dollars as entered. */
+  amount: number
+  /** Dollars per euro used for the conversion (ECB convention), e.g. 1.085. */
+  rate: number
+  /** Day the rate applies to (YYYY-MM-DD); for a typed-in rate the day it was entered. */
+  rateDate: string
+  /** live: fetched right before; cached: last fetched rate while offline; manual: typed in. */
+  source: 'live' | 'cached' | 'manual'
+  /** When the amount was converted (ISO timestamp). */
+  convertedAt: string
 }
 
 export interface VariablePay {
@@ -113,7 +132,7 @@ export interface Settings {
 }
 
 export interface AppData {
-  schemaVersion: 4
+  schemaVersion: 5
   categories: Category[]
   entries: Entry[]
   /** Investments and valuables, separate from income and expenses. */
@@ -149,4 +168,6 @@ export interface FinanceApi {
   onUpdateStatus(listener: (status: UpdateStatus) => void): () => void
   /** Registers the function that saves pending changes before the app closes. */
   onFlushRequest(flush: () => Promise<void>): () => void
+  /** Current ECB rate for US dollars; `refresh` skips the short in-memory cache. */
+  getUsdRate(refresh?: boolean): Promise<UsdQuote>
 }

@@ -1,11 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2, X } from 'lucide-react'
-import type { Entry, EntryKind, ExtraPayment, Interval } from '@shared/types'
+import type { Entry, EntryKind, ExtraPayment, ForeignAmount, Interval } from '@shared/types'
 import { isValidIso, monthlyEquivalent, nextOccurrence, todayIso, yearlyEquivalent } from '@shared/calc'
 import { INTERVAL_LABELS, INTERVAL_ORDER, newId, PAYMENT_METHODS } from '@shared/defaults'
+import { usdToEur } from '@shared/fx'
 import { useStore } from '@/lib/store'
-import { amountInput, date, money, MONTHS, parseAmount } from '@/lib/format'
+import { api } from '@/lib/api'
+import { amountInput, date, money, MONTHS, parseAmount, parseQuantity } from '@/lib/format'
 import { Dialog, Segmented } from './ui'
+import { rateInput, UsdRateRow, type RateState } from './UsdRate'
+
+type Currency = 'EUR' | 'USD'
 
 interface ExtraDraft {
   id: string
@@ -73,14 +78,25 @@ interface Props {
 export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Props) {
   const { data, upsertEntry } = useStore()
   const [entry, setEntry] = useState<Entry>(initial)
-  const [amountText, setAmountText] = useState(amountInput(initial.amount))
+  // For an entry entered in dollars the field shows the dollar amount; `amount` is always the euro value.
+  const [amountText, setAmountText] = useState(amountInput(initial.foreign?.amount ?? initial.amount))
+  const [currency, setCurrency] = useState<Currency>(initial.foreign ? 'USD' : 'EUR')
+  const [rateText, setRateText] = useState(initial.foreign ? rateInput(initial.foreign.rate) : '')
+  // An edited entry keeps the rate it was saved with until a new one is requested; copies fetch a fresh one.
+  const [rateState, setRateState] = useState<RateState | null>(
+    initial.foreign && !isNew ? { kind: 'stored', foreign: initial.foreign } : null
+  )
+  const rateRequest = useRef(0)
   const [showErrors, setShowErrors] = useState(false)
   const [extras, setExtras] = useState<ExtraDraft[]>(() =>
     (initial.extraPayments ?? []).map((x) => ({ id: x.id, month: x.month, label: x.label, amountText: amountInput(x.amount) }))
   )
 
   const categories = data.categories.filter((c) => c.kind === entry.kind)
-  const amount = parseAmount(amountText)
+  const usd = currency === 'USD' && !entry.variable
+  const entered = parseAmount(amountText)
+  const rate = usd ? parseQuantity(rateText) : null
+  const amount = !usd ? entered : entered !== null && rate ? usdToEur(entered, rate) : null
   const income = entry.kind === 'income'
   const recurring = entry.interval !== 'once'
   const parsedExtras: ExtraPayment[] = recurring
@@ -90,12 +106,62 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
 
   const errors = {
     name: !entry.name.trim() ? 'Bitte eine Bezeichnung eingeben.' : null,
-    amount: amount === null || amount <= 0 ? 'Bitte einen Betrag größer als 0 eingeben.' : null,
+    amount: entered === null || entered <= 0 ? 'Bitte einen Betrag größer als 0 eingeben.' : null,
+    rate:
+      usd && !rate
+        ? rateState?.kind === 'loading'
+          ? 'Der Kurs wird noch geladen.'
+          : 'Bitte einen Kurs eintragen, z. B. 1,0850.'
+        : null,
     startDate: !isValidIso(entry.startDate) ? 'Bitte ein gültiges Datum wählen.' : null,
     endDate: entry.endDate && entry.endDate < entry.startDate ? 'Das Enddatum liegt vor dem Startdatum.' : null,
     extras: extrasInvalid ? 'Bitte für jede Sonderzahlung einen Betrag größer als 0 eingeben.' : null
   }
   const valid = !Object.values(errors).some(Boolean)
+
+  const loadRate = (refresh: boolean) => {
+    const request = ++rateRequest.current
+    setRateState({ kind: 'loading' })
+    void api
+      .getUsdRate(refresh)
+      .catch((err: unknown) => ({ status: 'unavailable' as const, error: err instanceof Error ? err.message : String(err) }))
+      .then((quote) => {
+        // A rate typed in while loading wins over the answer.
+        if (request !== rateRequest.current) return
+        if (quote.status === 'unavailable') {
+          setRateState({ kind: 'unavailable', error: quote.error })
+          return
+        }
+        setRateText(rateInput(quote.rate.rate))
+        setRateState(quote.status === 'live' ? { kind: 'live', rate: quote.rate } : { kind: 'cached', rate: quote.rate, error: quote.error })
+      })
+  }
+
+  // The current rate is fetched as soon as dollars are chosen.
+  useEffect(() => {
+    if (usd && rateState === null) loadRate(false)
+  }, [usd])
+
+  const onRateChange = (text: string) => {
+    rateRequest.current++
+    setRateText(text)
+    setRateState({ kind: 'manual' })
+  }
+
+  const foreignToSave = (): ForeignAmount | null => {
+    if (!usd || entered === null || !rate) return null
+    const before = initial.foreign
+    if (!isNew && before && before.amount === entered && before.rate === rate) return before
+    const now = new Date().toISOString()
+    const state = rateState
+    if (state?.kind === 'live' || state?.kind === 'cached') {
+      return { currency: 'USD', amount: entered, rate, rateDate: state.rate.date, source: state.kind, convertedAt: now }
+    }
+    if (state?.kind === 'stored' && state.foreign.rate === rate) {
+      return { ...state.foreign, amount: entered, convertedAt: now }
+    }
+    return { currency: 'USD', amount: entered, rate, rateDate: todayIso(), source: 'manual', convertedAt: now }
+  }
 
   const set = <K extends keyof Entry>(key: K, value: Entry[K]) => setEntry((e) => ({ ...e, [key]: value }))
 
@@ -138,7 +204,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
       setShowErrors(true)
       return
     }
-    const saved = { ...entry, name: entry.name.trim(), amount, extraPayments: [...parsedExtras].sort((a, b) => a.month - b.month) }
+    const saved = { ...entry, name: entry.name.trim(), amount, foreign: foreignToSave(), extraPayments: [...parsedExtras].sort((a, b) => a.month - b.month) }
     upsertEntry(saved)
     onSaved?.(saved)
     onClose()
@@ -226,7 +292,26 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
         </div>
 
         <div className="field s2">
-          <label htmlFor="f-amount">Betrag</label>
+          <div className="label-row">
+            <label htmlFor="f-amount">Betrag</label>
+            {!entry.variable && (
+              <div className="segmented mini" role="radiogroup" aria-label="Währung">
+                {(['EUR', 'USD'] as Currency[]).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={currency === c}
+                    className={currency === c ? 'active' : ''}
+                    title={c === 'EUR' ? 'Betrag in Euro' : 'Betrag in US-Dollar, wird in Euro umgerechnet'}
+                    onClick={() => setCurrency(c)}
+                  >
+                    {c === 'EUR' ? '€' : '$'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="amount-input">
             <input
               id="f-amount"
@@ -237,8 +322,13 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
               inputMode="decimal"
               placeholder="0,00"
             />
-            <span>€</span>
+            <span>{usd ? '$' : '€'}</span>
           </div>
+          {usd && (
+            <span className="help num">
+              {amount !== null && entered ? `≈ ${money(amount)}` : rateState?.kind === 'loading' ? 'Kurs wird geladen …' : 'Umrechnung in Euro, sobald ein Kurs da ist'}
+            </span>
+          )}
           {err('amount')}
         </div>
 
@@ -264,6 +354,17 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
           />
           {err('startDate')}
         </div>
+
+        {usd && (
+          <UsdRateRow
+            state={rateState ?? { kind: 'loading' }}
+            rateText={rateText}
+            invalid={showErrors && !!errors.rate}
+            error={err('rate')}
+            onRateChange={onRateChange}
+            onReload={() => loadRate(true)}
+          />
+        )}
 
         {entry.interval !== 'once' && (
           <div className="field s2">

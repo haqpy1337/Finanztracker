@@ -2,6 +2,7 @@ import type { AppData, Asset, AssetValuation, Category, Entry, EntryKind, ExtraP
 import { CURRENT_SCHEMA, migrate } from './schema'
 import { addMonths, isValidIso, toIso } from './calc'
 import { normalizeAssets } from './assets'
+import { normalizeForeign } from './fx'
 
 export const INTERVAL_LABELS: Record<Interval, string> = {
   weekly: 'Wöchentlich',
@@ -69,6 +70,7 @@ export function blankEntry(kind: EntryKind, categoryId: string, startDate: strin
     notes: '',
     extraPayments: [],
     variable: null,
+    foreign: null,
     createdAt: now,
     updatedAt: now
   }
@@ -202,6 +204,7 @@ const ENTRY_FIELDS = new Set([
   'notes',
   'extraPayments',
   'variable',
+  'foreign',
   'createdAt',
   'updatedAt'
 ])
@@ -319,6 +322,7 @@ export function normalizeData(input: unknown): AppData {
       notes: str(r.notes),
       extraPayments: variable ? [] : normalizeExtras(r.extraPayments),
       variable,
+      foreign: variable ? null : normalizeForeign(r.foreign),
       createdAt: str(r.createdAt, now) || now,
       updatedAt: str(r.updatedAt, now) || now
     })

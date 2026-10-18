@@ -1,5 +1,6 @@
 import type { FinanceApi, UpdateStatus } from '@shared/types'
 import { normalizeData } from '@shared/defaults'
+import { parseUsdRate, USD_RATE_URLS, validUsdRate, type UsdQuote } from '@shared/fx'
 
 declare global {
   interface Window {
@@ -8,6 +9,35 @@ declare global {
 }
 
 const STORAGE_KEY = 'finanztracker-preview'
+const RATE_KEY = 'finanztracker-preview-usd'
+
+async function previewUsdRate(): Promise<UsdQuote> {
+  let error = 'Keine Kursquelle erreichbar'
+  for (const url of USD_RATE_URLS) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+      const rate = res.ok ? parseUsdRate(await res.json(), new Date().toISOString()) : null
+      if (rate) {
+        try {
+          localStorage.setItem(RATE_KEY, JSON.stringify(rate))
+        } catch {
+          // preview only
+        }
+        return { status: 'live', rate }
+      }
+      error = res.ok ? 'Unerwartete Antwort der Kursquelle' : `HTTP ${res.status}`
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err)
+    }
+  }
+  let cached = null
+  try {
+    cached = validUsdRate(JSON.parse(localStorage.getItem(RATE_KEY) ?? 'null'))
+  } catch {
+    // nothing cached
+  }
+  return cached ? { status: 'cached', rate: cached, error } : { status: 'unavailable', error }
+}
 
 /**
  * Stand-in used when the UI runs in a plain browser (development preview,
@@ -55,7 +85,8 @@ const browserApi: FinanceApi = {
   },
   onFlushRequest() {
     return () => undefined
-  }
+  },
+  getUsdRate: () => previewUsdRate()
 }
 
 export const api: FinanceApi = window.finance ?? browserApi
