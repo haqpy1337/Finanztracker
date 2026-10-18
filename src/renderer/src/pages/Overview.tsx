@@ -92,7 +92,14 @@ export function Overview() {
                   <Plus size={16} />
                   Erste Ausgabe hinzufügen
                 </button>
-                <button className="btn" onClick={() => replaceData({ ...sampleData({ y, m }), settings: data.settings })}>
+                <button
+                  className="btn"
+                  // Assets the user already entered stay; only the empty income/expense part is filled.
+                  onClick={() => {
+                    const sample = sampleData({ y, m })
+                    replaceData({ ...sample, settings: data.settings, assets: data.assets.length ? data.assets : sample.assets })
+                  }}
+                >
                   Beispieldaten laden
                 </button>
               </>
@@ -120,7 +127,7 @@ export function Overview() {
           <>
             <button className="btn" onClick={() => editor.create('income')}>
               <TrendingUp size={16} />
-              Einnahme
+              Einnahme hinzufügen
             </button>
             <button className="btn primary" onClick={() => editor.create('expense')}>
               <Plus size={16} />

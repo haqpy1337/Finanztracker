@@ -21,6 +21,12 @@ Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen P
   Jahresübersicht erscheinen und in den Monatsdurchschnitt einfließen.
 - Schwankende Einnahmen wie Rufbereitschaft: Betrag pro Einheit (z. B. 500 € pro Woche) mal übliche
   Anzahl pro Monat, einzelne Monate lassen sich abweichend eintragen (z. B. 2 Wochen im November).
+- **Anlagen** als eigener Bereich, getrennt von Einnahmen und Ausgaben: ETFs, Aktien, Fonds,
+  Krypto, Edelmetalle, Tages- und Festgeld sowie Wertgegenstände wie gegradete Sammelkarten
+  (mit Beschreibung, Grading und Zertifikatsnummer). Kaufpreis und Kaufdatum eintragen, später
+  jederzeit neue Wertstände ergänzen (bei Sparplänen optional mit eingezahltem Betrag). Auswertung
+  mit Gesamtwert, Gewinn/Verlust in Euro und Prozent, Verlauf über die Zeit, Aufteilung nach Art,
+  Gewinn/Verlust je Anlage und Detailansicht pro Anlage; Verkäufe schreiben den Gewinn fest.
 - **Kategorien** frei anpassbar, **Einstellungen** für Hell/Dunkel, Monatsbudget,
   Export/Import und Beispieldaten.
 - **Automatische Updates** beim Start über GitHub Releases.

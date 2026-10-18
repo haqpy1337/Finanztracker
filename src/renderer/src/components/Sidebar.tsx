@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import { CalendarDays, CalendarRange, Download, LayoutDashboard, List, RefreshCw, Settings, Tags } from 'lucide-react'
+import { CalendarDays, CalendarRange, Download, Gem, LayoutDashboard, List, RefreshCw, Settings, Tags } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Logo } from './Logo'
 import { useAppVersion, useUpdateStatus } from '@/lib/updates'
 
-export type PageId = 'overview' | 'month' | 'year' | 'entries' | 'categories' | 'settings'
+export type PageId = 'overview' | 'month' | 'year' | 'assets' | 'entries' | 'categories' | 'settings'
 
 const SECTIONS: Array<{ label: string; items: Array<{ id: PageId; label: string; icon: ReactNode }> }> = [
   {
@@ -14,6 +14,10 @@ const SECTIONS: Array<{ label: string; items: Array<{ id: PageId; label: string;
       { id: 'month', label: 'Monatsübersicht', icon: <CalendarDays size={17} /> },
       { id: 'year', label: 'Jahresübersicht', icon: <CalendarRange size={17} /> }
     ]
+  },
+  {
+    label: 'Vermögen',
+    items: [{ id: 'assets', label: 'Anlagen', icon: <Gem size={17} /> }]
   },
   {
     label: 'Verwalten',

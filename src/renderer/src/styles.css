@@ -1622,6 +1622,215 @@ tr:hover .row-actions {
   }
 }
 
+/* Assets */
+
+.text-warn {
+  color: var(--warn);
+}
+
+.preview-box {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.back-btn {
+  margin: -6px 0 10px -10px;
+  color: var(--text-2);
+}
+
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.table tr.clickable {
+  cursor: pointer;
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.type-grid button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s var(--ease-out);
+}
+
+.type-grid button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.type-grid button:active {
+  transform: scale(0.97);
+}
+
+.type-grid button.active {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.type-grid button span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asset-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.asset-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+
+.gain-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gain-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr) 104px 62px;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.16s ease;
+}
+
+.gain-row:hover {
+  background: var(--surface-2);
+}
+
+.gain-row .name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gain-row .track {
+  position: relative;
+  height: 10px;
+}
+
+.gain-row .axis {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.gain-row .bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 3px;
+  animation: grow-x 0.7s calc(0.15s + var(--i) * 0.05s) var(--ease-out) both;
+  transition:
+    width 0.45s var(--ease-out),
+    left 0.45s var(--ease-out);
+}
+
+.gain-row .value,
+.gain-row .pct {
+  text-align: right;
+  font-weight: 600;
+}
+
+.gain-row .pct {
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.details {
+  margin: 0;
+  padding: 0 18px 10px;
+}
+
+.details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.details > div:last-child {
+  border-bottom: 0;
+}
+
+.details dt {
+  color: var(--muted);
+  flex: none;
+}
+
+.details dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.details .notes {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.details .notes dd {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-2);
+  white-space: pre-wrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

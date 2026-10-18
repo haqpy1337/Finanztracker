@@ -1,6 +1,7 @@
-import type { AppData, Category, Entry, EntryKind, ExtraPayment, Interval, Settings, VariablePay } from './types'
+import type { AppData, Asset, AssetValuation, Category, Entry, EntryKind, ExtraPayment, Interval, Settings, VariablePay } from './types'
 import { CURRENT_SCHEMA, migrate } from './schema'
 import { addMonths, isValidIso, toIso } from './calc'
+import { normalizeAssets } from './assets'
 
 export const INTERVAL_LABELS: Record<Interval, string> = {
   weekly: 'Wöchentlich',
@@ -40,7 +41,7 @@ export function defaultCategories(): Category[] {
 }
 
 export function emptyData(): AppData {
-  return { schemaVersion: CURRENT_SCHEMA, categories: defaultCategories(), entries: [], settings: { ...DEFAULT_SETTINGS } }
+  return { schemaVersion: CURRENT_SCHEMA, categories: defaultCategories(), entries: [], assets: [], settings: { ...DEFAULT_SETTINGS } }
 }
 
 export function newId(prefix = 'e'): string {
@@ -101,11 +102,6 @@ export function sampleData(today: { y: number; m: number }): AppData {
         { id: newId('x'), month: 11, amount: 3150, label: '14. Gehalt' }
       ]
     }),
-    make('Rufbereitschaft', 'cat-gehalt', 500, 'monthly', day(28), {
-      provider: 'Arbeitgeber',
-      paymentMethod: 'Überweisung',
-      variable: { rate: 500, unit: 'Woche', usual: 1, months: [] }
-    }),
     make('Kaltmiete', 'cat-wohnen', 850, 'monthly', day(1), { paymentMethod: 'Dauerauftrag', provider: 'Hausverwaltung' }),
     make('Nebenkosten-Vorauszahlung', 'cat-wohnen', 180, 'monthly', day(1), { paymentMethod: 'Dauerauftrag' }),
     make('Strom', 'cat-wohnen', 72, 'monthly', day(15), { provider: 'Stadtwerke', noticePeriod: '4 Wochen' }),
@@ -127,7 +123,65 @@ export function sampleData(today: { y: number; m: number }): AppData {
     make('ETF-Sparplan', 'cat-sparen', 250, 'monthly', day(2), { paymentMethod: 'Lastschrift', provider: 'Depot' }),
     make('Neue Waschmaschine', 'cat-sonstiges', 549, 'once', toIso(today.y, Math.min(12, Math.max(1, today.m - 2)), 14), { paymentMethod: 'Kreditkarte' })
   ]
+  data.assets = sampleAssets(today)
   return data
+}
+
+function sampleAssets(today: { y: number; m: number }): Asset[] {
+  const ago = (months: number, d = 15) => addMonths(toIso(today.y, today.m, d), -months)
+  const now = new Date().toISOString()
+  const base = { identifier: '', quantity: null, description: '', grading: '', certificate: '', notes: '', sale: null, createdAt: now, updatedAt: now }
+  const v = (date: string, value: number, invested: number | null = null, note = ''): AssetValuation => ({ id: newId('v'), date, value, invested, note })
+  return [
+    {
+      ...base,
+      id: newId('a'),
+      type: 'etf',
+      name: 'MSCI World ETF (Sparplan)',
+      provider: 'Trade Republic',
+      identifier: 'IE00B4L5Y983',
+      purchaseDate: ago(20, 2),
+      purchaseValue: 1000,
+      valuations: [v(ago(14), 2610, 2500), v(ago(9), 3720, 3750), v(ago(4), 5380, 5000), v(ago(0, 1), 6290, 6000)]
+    },
+    {
+      ...base,
+      id: newId('a'),
+      type: 'stock',
+      name: 'Apple',
+      provider: 'Trade Republic',
+      identifier: 'US0378331005',
+      quantity: 8,
+      purchaseDate: ago(16, 10),
+      purchaseValue: 1420,
+      valuations: [v(ago(10), 1365.4), v(ago(3), 1612.8), v(ago(0, 1), 1688)]
+    },
+    {
+      ...base,
+      id: newId('a'),
+      type: 'crypto',
+      name: 'Bitcoin',
+      provider: 'Bitpanda',
+      identifier: 'BTC',
+      quantity: 0.025,
+      purchaseDate: ago(13, 5),
+      purchaseValue: 1600,
+      valuations: [v(ago(8), 1180), v(ago(2), 1395), v(ago(0, 1), 1310)]
+    },
+    {
+      ...base,
+      id: newId('a'),
+      type: 'collectible',
+      name: 'Glurak Holo',
+      provider: 'eBay',
+      description: 'Pokémon Base Set, 4/102, Unlimited',
+      grading: 'PSA 9',
+      certificate: '81234567',
+      purchaseDate: ago(18, 20),
+      purchaseValue: 850,
+      valuations: [v(ago(11), 920, null, 'Vergleich verkaufter Karten'), v(ago(1), 1150, null, 'Cardmarket-Trend')]
+    }
+  ]
 }
 
 const ENTRY_FIELDS = new Set([
@@ -276,5 +330,5 @@ export function normalizeData(input: unknown): AppData {
     monthlyBudget: typeof s.monthlyBudget === 'number' && s.monthlyBudget > 0 ? s.monthlyBudget : 0
   }
 
-  return { schemaVersion: CURRENT_SCHEMA, categories, entries, settings }
+  return { schemaVersion: CURRENT_SCHEMA, categories, entries, assets: normalizeAssets(obj.assets), settings }
 }

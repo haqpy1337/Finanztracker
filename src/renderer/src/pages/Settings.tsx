@@ -31,7 +31,7 @@ export function Settings() {
       const imported = await api.importJson()
       if (!imported) return
       replaceData(imported)
-      toast({ message: `${imported.entries.length} Posten importiert` })
+      toast({ message: `${imported.entries.length} Posten${imported.assets.length ? ` und ${imported.assets.length} Anlagen` : ''} importiert` })
     } catch (err) {
       toast({ message: err instanceof Error ? err.message : 'Import fehlgeschlagen' })
     }
@@ -87,7 +87,7 @@ export function Settings() {
           <div className="settings-row">
             <div>
               <div>Sicherung exportieren</div>
-              <div className="desc">Speichert alle Posten, Kategorien und Einstellungen als JSON-Datei.</div>
+              <div className="desc">Speichert alle Posten, Anlagen, Kategorien und Einstellungen als JSON-Datei.</div>
             </div>
             <div className="controls">
               <button
@@ -148,7 +148,7 @@ export function Settings() {
           <div className="settings-row">
             <div>
               <div>Beispieldaten laden</div>
-              <div className="desc">Füllt die App mit typischen Beispielposten zum Ausprobieren. Ersetzt die aktuellen Daten.</div>
+              <div className="desc">Füllt die App mit typischen Beispielposten und -anlagen zum Ausprobieren. Ersetzt die aktuellen Daten.</div>
             </div>
             <div className="controls">
               <button className="btn" onClick={() => setConfirm('sample')}>
@@ -159,7 +159,7 @@ export function Settings() {
           <div className="settings-row">
             <div>
               <div>Alle Daten löschen</div>
-              <div className="desc">Entfernt alle Posten und setzt die Kategorien zurück.</div>
+              <div className="desc">Entfernt alle Posten und Anlagen und setzt die Kategorien zurück.</div>
             </div>
             <div className="controls">
               <button className="btn text-bad" onClick={() => setConfirm('reset')}>
@@ -207,7 +207,7 @@ export function Settings() {
       {confirm === 'reset' && (
         <ConfirmDialog
           title="Alle Daten löschen?"
-          text="Alle Posten und eigenen Kategorien werden entfernt. Vorher wird eine Sicherung im Datenordner angelegt."
+          text="Alle Posten, Anlagen und eigenen Kategorien werden entfernt. Vorher wird eine Sicherung im Datenordner angelegt."
           confirmLabel="Alles löschen"
           onClose={() => setConfirm(null)}
           onConfirm={async () => {
@@ -220,7 +220,7 @@ export function Settings() {
       {confirm === 'sample' && (
         <ConfirmDialog
           title="Beispieldaten laden?"
-          text="Deine aktuellen Posten werden durch Beispieldaten ersetzt. Vorher wird eine Sicherung im Datenordner angelegt."
+          text="Deine aktuellen Posten und Anlagen werden durch Beispieldaten ersetzt. Vorher wird eine Sicherung im Datenordner angelegt."
           confirmLabel="Beispieldaten laden"
           onClose={() => setConfirm(null)}
           onConfirm={async () => {
