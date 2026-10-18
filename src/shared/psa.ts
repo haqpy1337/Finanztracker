@@ -28,18 +28,17 @@ export function cleanCertNumber(input: string): string | null {
   return /^\d{7,10}$/.test(s) ? s : null
 }
 
-/** "$1,234.50" -> 1234.5 */
+/** "$1,234.50" -> 1234.5; the first dollar amount in the text counts. */
 export function parseUsdText(text: string): number | null {
-  const m = text.replace(/\s/g, '').match(/^(?:US)?\$([\d,]+(?:\.\d{1,2})?)$/i)
+  const m = text.replace(/\s/g, '').match(/\$([\d,]+(?:\.\d{1,2})?)/)
   if (!m) return null
   const n = Number(m[1].replace(/,/g, ''))
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
 function parseCount(text: string | undefined): number | null {
-  if (!text) return null
-  const s = text.replace(/[,.\s]/g, '')
-  return /^\d+$/.test(s) ? Number(s) : null
+  const m = text?.match(/\d[\d,.]*/)
+  return m ? Number(m[0].replace(/[,.]/g, '')) : null
 }
 
 /** "MINT 9" -> "PSA 9", "GEM MT 10" -> "PSA 10", "NM-MT 8.5" -> "PSA 8.5", "AUTHENTIC" -> "PSA Authentic" */
@@ -54,6 +53,40 @@ function valueAfter(lines: string[], label: string): string | undefined {
   const i = lines.findIndex((l) => l.toUpperCase().replace(/[^A-Z ]/g, '').trim() === label)
   return i >= 0 ? lines.slice(i + 1).find((l) => l.trim()) : undefined
 }
+
+export const PSA_LABELS = ['ITEM GRADE', 'PSA ESTIMATE', 'PSA POPULATION', 'PSA POP HIGHER']
+
+/**
+ * Runs inside the certificate page. Finds each label element by its own text and
+ * takes the text of the next element after it (going up a few levels if the label
+ * is wrapped, e.g. next to an info icon). Works without layout, unlike innerText,
+ * so it also reads a page that was never shown. Returns [label, value, label, value, …]
+ * followed by the visible lines, plus title and heading.
+ */
+export const PSA_READ_SCRIPT = `(() => {
+  const labels = ${JSON.stringify(PSA_LABELS)}
+  const norm = (s) => (s || '').toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\\s+/g, ' ').trim()
+  const pairs = []
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('script, style, noscript')) continue
+    const own = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' ')
+    const label = norm(own)
+    if (!labels.includes(label) || pairs.includes(label)) continue
+    let value = ''
+    let node = el
+    for (let up = 0; up < 4 && node && !value; up++) {
+      for (let sib = node.nextElementSibling; sib && !value; sib = sib.nextElementSibling) value = (sib.textContent || '').trim()
+      node = node.parentElement
+    }
+    if (value) pairs.push(label, value.replace(/\\s+/g, ' '))
+  }
+  const h1 = document.querySelector('h1')
+  return {
+    title: document.title,
+    heading: h1 ? h1.textContent || '' : '',
+    lines: pairs.concat((document.body ? document.body.innerText : '').split('\\n'))
+  }
+})()`
 
 /**
  * Reads the certificate page from its visible text (document.body.innerText split

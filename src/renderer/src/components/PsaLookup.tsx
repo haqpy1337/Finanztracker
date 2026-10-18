@@ -64,7 +64,14 @@ export function PsaLookupButton({ certificate, onResult, appliedText }: Props) {
         <Search size={14} />
         {state.kind === 'loading' ? 'PSA wird abgefragt …' : 'Von PSA abrufen'}
       </button>
-      {state.kind === 'error' && <span className="error">{state.error}</span>}
+      {state.kind === 'loading' && (
+        <span className="help">Moo liest die PSA-Seite. Erscheint ein PSA-Fenster, lädt die Seite dort fertig und das Fenster schließt sich von selbst.</span>
+      )}
+      {state.kind === 'error' && (
+        <span className="error">
+          {state.error} Du kannst den Wert weiter von Hand eintragen; Details stehen unter Einstellungen im Protokoll.
+        </span>
+      )}
       {done && (
         <div className="psa-result">
           <div>
