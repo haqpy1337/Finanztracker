@@ -1807,6 +1807,11 @@ tr:hover .row-actions {
   font-size: 12px;
 }
 
+.segmented.mini button.active {
+  color: var(--accent);
+  font-weight: 650;
+}
+
 .rate-row {
   display: flex;
   align-items: center;

@@ -318,7 +318,7 @@ export function EntryDialog({ initial, isNew, onClose, onSaved, onDelete }: Prop
               className={`input num ${showErrors && errors.amount ? 'invalid' : ''}`}
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
-              onBlur={() => amount !== null && setAmountText(amountInput(amount))}
+              onBlur={() => entered !== null && setAmountText(amountInput(entered))}
               inputMode="decimal"
               placeholder="0,00"
             />

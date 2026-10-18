@@ -21,6 +21,11 @@ Kosten wie Lebensmittel und auch Einnahmen. Alle Daten bleiben auf dem eigenen P
   Jahresübersicht erscheinen und in den Monatsdurchschnitt einfließen.
 - Schwankende Einnahmen wie Rufbereitschaft: Betrag pro Einheit (z. B. 500 € pro Woche) mal übliche
   Anzahl pro Monat, einzelne Monate lassen sich abweichend eintragen (z. B. 2 Wochen im November).
+- Beträge in **US-Dollar** eingeben: Beim Wechsel auf $ lädt die App den aktuellen
+  EZB-Referenzkurs (Frankfurter-API, ohne Anmeldung) und zeigt den Euro-Betrag sofort an.
+  Ein Hinweis zeigt, ob der Live-Kurs geladen wurde. Ist die Kursquelle nicht erreichbar,
+  wird der zuletzt geladene Kurs mit Datum angeboten, oder der Kurs lässt sich von Hand
+  eintragen. Gespeichert wird der Euro-Betrag zusammen mit Dollar-Betrag, Kurs und Kursdatum.
 - **Anlagen** als eigener Bereich, getrennt von Einnahmen und Ausgaben: ETFs, Aktien, Fonds,
   Krypto, Edelmetalle, Tages- und Festgeld sowie Wertgegenstände wie gegradete Sammelkarten
   (mit Beschreibung, Grading und Zertifikatsnummer). Kaufpreis und Kaufdatum eintragen, später
