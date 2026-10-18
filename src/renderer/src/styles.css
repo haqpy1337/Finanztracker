@@ -1459,15 +1459,26 @@ tr:hover .row-actions {
   animation: rise-in 0.25s var(--ease-out) both;
 }
 
-/* Start-up screen: the app builds itself from a bare frame */
+/* Start-up screen: the Moo mark draws itself on the app's grey, then fades into the app */
 .splash {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: var(--bg);
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 46%, var(--splash-glow) 0, var(--bg) 62%);
   transition:
     opacity 0.42s var(--ease-in-out),
     visibility 0.42s;
+}
+
+:root {
+  --splash-glow: #fbfbfa;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root[data-theme='dark'] {
+  --splash-glow: #1f1f1e;
 }
 
 .splash.exit {
@@ -1475,150 +1486,118 @@ tr:hover .row-actions {
   visibility: hidden;
 }
 
-.sp {
+.moo {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  height: 100%;
-}
-
-.sp-side {
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
-  padding: 78px 12px 0;
-  display: grid;
-  gap: 14px;
-  align-content: start;
-  animation: sp-side 0.6s var(--ease-out) both;
-}
-
-.sp-side i {
-  display: block;
-  height: 16px;
-  border-radius: 6px;
-  background: var(--border);
-  animation: page-in 0.4s calc(0.4s + var(--i) * 0.07s) both;
-}
-
-.sp-side i:first-child {
-  animation:
-    page-in 0.4s 0.4s both,
-    sp-active 0.5s 2.9s both;
-}
-
-.sp-main {
-  padding: 40px 36px;
-  display: grid;
+  justify-items: center;
   gap: 18px;
-  align-content: start;
-  min-width: 0;
+  transition: transform 0.42s var(--ease-in-out);
 }
 
-.sp-head {
-  height: 30px;
-  width: 260px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  transform-origin: left;
-  animation: sp-head 0.5s 0.45s var(--ease-out) both;
+.splash.exit .moo {
+  transform: scale(1.04) translateY(-6px);
 }
 
-.sp-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+.moo svg {
+  width: min(300px, 46vw);
+  height: auto;
+  overflow: visible;
+  color: var(--text);
 }
 
-.sp-card {
-  height: 190px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  animation: sp-card 0.55s calc(0.7s + var(--i) * 0.2s) var(--ease-out) both;
-}
-
-.sp-card.wide {
-  height: 170px;
-}
-
-.sp-card svg {
-  width: min(190px, 80%);
-  height: 80%;
-}
-
-.sp-card.wide svg {
-  width: min(520px, 80%);
-}
-
-.sp-ring {
+.moo-draw {
   fill: none;
-  stroke-width: 6;
-  stroke-dasharray: var(--L) 75.4;
-  animation: sp-ring 0.5s calc(1.7s + var(--i) * 0.22s) var(--ease-in-out) both;
-}
-
-.sp-bar {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: sp-grow 0.6s calc(1.9s + var(--i) * 0.1s) var(--ease-out) both;
-}
-
-.sp-line {
-  fill: none;
-  stroke-width: 1.4;
+  stroke: currentColor;
+  stroke-width: 16;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 1 1;
-  animation: sp-draw 1s 2.2s var(--ease-in-out) both;
+  animation: moo-draw 0.62s var(--d) var(--ease-in-out) both;
 }
 
-@keyframes sp-side {
-  from {
-    transform: translateX(-100%);
-  }
+.moo-head {
+  transform-box: fill-box;
+  transform-origin: 50% 70%;
+  animation:
+    moo-pop 0.6s 0.5s var(--ease-spring) both,
+    moo-nod 0.7s 1.25s var(--ease-in-out);
 }
 
-@keyframes sp-head {
-  from {
-    transform: scaleX(0);
-  }
+.moo-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 16;
 }
 
-@keyframes sp-card {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
+.moo-horn {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 12.8;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  animation: moo-horn 0.5s var(--d) var(--ease-spring) both;
 }
 
-@keyframes sp-ring {
-  from {
-    stroke-dasharray: 0 75.4;
-  }
+.moo-nose {
+  fill: currentColor;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: moo-blink 0.3s var(--d) var(--ease-out) both;
 }
 
-@keyframes sp-grow {
-  from {
-    transform: scaleY(0);
-  }
+.moo-tag {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+  animation: moo-tag 0.7s 1.15s var(--ease-out) both;
+  letter-spacing: 0.32em;
+  padding-left: 0.32em;
 }
 
-@keyframes sp-draw {
+@keyframes moo-draw {
   from {
     stroke-dashoffset: 1;
   }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
-@keyframes sp-active {
+@keyframes moo-pop {
   from {
-    background: var(--border);
+    opacity: 0;
+    transform: scale(0.3);
   }
-  to {
-    background: var(--accent);
+}
+
+@keyframes moo-nod {
+  30% {
+    transform: rotate(-7deg);
+  }
+  65% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes moo-horn {
+  from {
+    opacity: 0;
+    transform: scale(0.2) translateY(30%);
+  }
+}
+
+@keyframes moo-blink {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@keyframes moo-tag {
+  from {
+    opacity: 0;
+    letter-spacing: 0.6em;
+    transform: translateY(6px);
   }
 }
 

@@ -1,24 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useDark } from '@/lib/theme'
-import { seriesColor } from '@/lib/palette'
 
-// The build-up runs about 3.4 s; a click or key press skips the wait.
-const MIN_VISIBLE_MS = 3600
+// The mark is drawn in about 2 s; a click or key press skips the wait.
+const MIN_VISIBLE_MS = 2300
 const EXIT_MS = 420
-const SHARES = [0.3, 0.24, 0.18, 0.16, 0.12]
-const BAR_HEIGHTS = [14, 22, 17, 27, 20]
-// Palette slots in the order the segments are drawn: blue, green, amber, orange, pink.
-const SLOTS = [0, 2, 3, 1, 4]
-const RING_RADIUS = 12
-const RING_LENGTH = 2 * Math.PI * RING_RADIUS
+
+const delay = (s: number) => ({ '--d': `${s}s` }) as React.CSSProperties
 
 /**
- * Start-up screen: the app builds itself from a bare frame while the data
+ * Start-up screen: the Moo mark draws itself on the app's grey while the data
  * loads, then fades into the real app. It stays for at least a moment so the
  * animation never flickers.
  */
 export function Splash({ ready, onExit }: { ready: boolean; onExit?(): void }) {
-  const dark = useDark()
   const [minElapsed, setMinElapsed] = useState(false)
   const [phase, setPhase] = useState<'show' | 'exit' | 'done'>('show')
 
@@ -45,64 +38,21 @@ export function Splash({ ready, onExit }: { ready: boolean; onExit?(): void }) {
 
   if (phase === 'done') return null
 
-  let offset = 0
-  const arcs = SHARES.map((share, i) => {
-    const length = RING_LENGTH * share
-    const arc = (
-      <circle
-        key={i}
-        className="sp-ring"
-        style={{ '--i': i, '--L': length.toFixed(1), strokeDashoffset: (-offset).toFixed(1) } as React.CSSProperties}
-        cx="20"
-        cy="20"
-        r={RING_RADIUS}
-        stroke={seriesColor(SLOTS[i], dark)}
-      />
-    )
-    offset += length
-    return arc
-  })
-
   return (
     <div className={`splash ${phase === 'exit' ? 'exit' : ''}`} aria-hidden="true">
-      <div className="sp">
-        <div className="sp-side">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <i key={i} style={{ '--i': i } as React.CSSProperties} />
-          ))}
-        </div>
-        <div className="sp-main">
-          <div className="sp-head" />
-          <div className="sp-row">
-            <div className="sp-card" style={{ '--i': 0 } as React.CSSProperties}>
-              <svg viewBox="0 0 40 40">
-                <g transform="rotate(-90 20 20)">{arcs}</g>
-              </svg>
-            </div>
-            <div className="sp-card" style={{ '--i': 1 } as React.CSSProperties}>
-              <svg viewBox="0 0 40 40">
-                {BAR_HEIGHTS.map((h, i) => (
-                  <rect
-                    key={i}
-                    className="sp-bar"
-                    style={{ '--i': i } as React.CSSProperties}
-                    x={3 + i * 7.4}
-                    y={36 - h}
-                    width="5.2"
-                    height={h}
-                    rx="1.4"
-                    fill={seriesColor(SLOTS[i], dark)}
-                  />
-                ))}
-              </svg>
-            </div>
-          </div>
-          <div className="sp-card wide" style={{ '--i': 2 } as React.CSSProperties}>
-            <svg viewBox="0 0 120 30" preserveAspectRatio="xMidYMid meet">
-              <path className="sp-line" pathLength={1} stroke={seriesColor(0, dark)} d="M4 24 C 20 22 26 12 40 14 S 62 8 76 10 S 96 4 116 3" />
-            </svg>
-          </div>
-        </div>
+      <div className="moo">
+        <svg viewBox="-12 -10 314 128">
+          <path className="moo-draw" pathLength={1} style={delay(0.05)} d="M8 100 V12 L48 64 L88 12 V100" />
+          <circle className="moo-draw" pathLength={1} style={delay(0.3)} cx="151" cy="66" r="34" transform="rotate(-90 151 66)" />
+          <g className="moo-head">
+            <path className="moo-horn" style={{ ...delay(0.85), transformOrigin: '100% 100%' }} d="M227.1 39.2 Q206 38.5 210.1 14.7" />
+            <path className="moo-horn" style={{ ...delay(0.93), transformOrigin: '0% 100%' }} d="M268.9 39.2 Q290 38.5 285.9 14.7" />
+            <circle className="moo-ring" cx="248" cy="66" r="34" />
+            <ellipse className="moo-nose" style={delay(1.05)} cx="237.8" cy="74.5" rx="4.1" ry="5.8" />
+            <ellipse className="moo-nose" style={delay(1.1)} cx="258.2" cy="74.5" rx="4.1" ry="5.8" />
+          </g>
+        </svg>
+        <div className="moo-tag">Money Overview</div>
       </div>
     </div>
   )
